@@ -42,6 +42,15 @@ export async function findBrowserExecutable(explicit?: string | null): Promise<s
   return null; // let Remotion download/choose its own
 }
 
+/**
+ * Chromium GL backend. Remotion's default is fastest on CPU-only machines here
+ * (~110 ms/frame vs ~380 ms/frame with "swangle"); override with STUDIO_RENDER_GL.
+ */
+function chromiumOptions(): { gl?: "swangle" | "angle" | "egl" | "swiftshader" | "vulkan" | "angle-egl" } {
+  const gl = process.env.STUDIO_RENDER_GL as ReturnType<typeof chromiumOptions>["gl"] | undefined;
+  return gl ? { gl } : {};
+}
+
 export interface RenderOptions {
   outputFile: string;
   /** Local audio file to serve to the composition as plan.audio.src. */
@@ -81,7 +90,7 @@ export async function renderPlan(plan: RenderPlan, opts: RenderOptions): Promise
     pixelFormat: "yuv420p",
     audioCodec: "aac",
     logLevel: "error",
-    chromiumOptions: { gl: "swangle" },
+    chromiumOptions: chromiumOptions(),
     onProgress: ({ progress, stitchStage }) => opts.onProgress?.({ stage: stitchStage === "muxing" ? "encoding" : "rendering", progress }),
   });
   return opts.outputFile;
@@ -94,6 +103,6 @@ export async function renderPlanStill(plan: RenderPlan, frame: number, outputFil
   const inputProps = { ...plan, audio: null } as unknown as Record<string, unknown>;
   const composition = await selectComposition({ serveUrl, id: "TutorialShort", inputProps, browserExecutable: exe, logLevel: "error" });
   await mkdir(dirname(outputFile), { recursive: true });
-  await renderStill({ composition, serveUrl, output: outputFile, frame, inputProps, browserExecutable: exe, logLevel: "error", chromiumOptions: { gl: "swangle" } });
+  await renderStill({ composition, serveUrl, output: outputFile, frame, inputProps, browserExecutable: exe, logLevel: "error", chromiumOptions: chromiumOptions() });
   return outputFile;
 }
