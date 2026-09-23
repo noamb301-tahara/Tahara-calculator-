@@ -7,6 +7,7 @@
  *   studio demo                                      manual demo tutorial → final video
  *   studio list | status <id> | approve <id>
  *   studio academy                                   course/presentation outline from all tutorials
+ *   studio doctor                                    which providers/keys/tools a run will use
  */
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -116,7 +117,31 @@ switch (cmd) {
     console.log(`academy: ${out.tutorials} tutorials → ${out.files.join(", ")}`);
     break;
   }
+  case "doctor": {
+    // Preflight: which providers a run will use. Prints key presence only, never values.
+    const { hasCommand } = await import("@studio/shared/node");
+    const { chooseProvider } = await import("@studio/voice");
+    const ok = (b: boolean) => (b ? "✓" : "✗");
+    const reach = async (url: string) => {
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        // 401 = the API answered (key missing/invalid). 403 here usually means a proxy/network policy denied the host.
+        return r.status === 403 ? "BLOCKED (HTTP 403 — network policy, or key without permission)" : `reachable (HTTP ${r.status})`;
+      } catch (e) {
+        return `NOT reachable (${((e as Error).cause as Error)?.message ?? (e as Error).message})`;
+      }
+    };
+    console.log(`.env file:            ${ok(existsSync(resolve(root, ".env")))}`);
+    for (const k of ["ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID", "ANTHROPIC_API_KEY"]) console.log(`${k.padEnd(21)} ${process.env[k] ? "set" : "missing"}`);
+    for (const c of ["ffmpeg", "ffprobe", "tesseract", "espeak-ng"]) console.log(`${c.padEnd(21)} ${ok(await hasCommand(c))}`);
+    console.log(`api.elevenlabs.io     ${await reach("https://api.elevenlabs.io/v1/models")}`);
+    console.log(`api.anthropic.com     ${await reach("https://api.anthropic.com/v1/models")}`);
+    const voice = await chooseProvider(config).then((c) => `${c.provider.name} — ${c.reason}`).catch((e: Error) => `error: ${e.message}`);
+    console.log(`voice provider:       ${voice}`);
+    console.log(`LLM:                  ${pipeline.llm ? `anthropic (${config.llm.model})` : "none — heuristic mode"}`);
+    break;
+  }
   default:
-    console.log("usage: studio <import|run|batch|demo|list|status|approve|academy> ...  (see scripts/studio.ts)");
+    console.log("usage: studio <import|run|batch|demo|list|status|approve|academy|doctor> ...  (see scripts/studio.ts)");
     process.exitCode = cmd ? 1 : 0;
 }

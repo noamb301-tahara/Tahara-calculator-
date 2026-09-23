@@ -19,7 +19,8 @@
     "batch": "tsx scripts/studio.ts batch input",
     "remotion:studio": "pnpm --filter @studio/renderer studio",
     "admin:dev": "pnpm --filter @studio/admin dev",
-    "admin:build": "pnpm --filter @studio/admin build"
+    "admin:build": "pnpm --filter @studio/admin build",
+    "doctor": "tsx scripts/studio.ts doctor"
   },
   "devDependencies": {
     "@studio/demo-data": "workspace:*",

@@ -28,6 +28,7 @@ export interface LoadConfigOptions {
  */
 export async function loadConfig(opts: LoadConfigOptions = {}): Promise<{ config: StudioConfig; root: string }> {
   const root = opts.root ?? findRepoRoot();
+  loadDotEnv(root);
   const file = resolve(root, opts.file ?? process.env.STUDIO_CONFIG ?? "config/studio.config.json");
   let fromFile: unknown = {};
   if (await exists(file)) fromFile = JSON.parse(await readFile(file, "utf8"));
@@ -38,4 +39,20 @@ export async function loadConfig(opts: LoadConfigOptions = {}): Promise<{ config
   if (process.env.ELEVENLABS_VOICE_ID && !merged.voice.elevenlabs.voiceId) merged.voice.elevenlabs.voiceId = process.env.ELEVENLABS_VOICE_ID;
   if (process.env.STUDIO_BROWSER_EXECUTABLE) merged.render.browserExecutable = process.env.STUDIO_BROWSER_EXECUTABLE;
   return { config: StudioConfigSchema.parse(merged), root };
+}
+
+/**
+ * Load `<root>/.env` into process.env (secrets live only there or in the real
+ * environment). Variables already set in the environment win over the file.
+ */
+export function loadDotEnv(root: string): string[] {
+  const file = resolve(root, ".env");
+  if (!existsSync(file)) return [];
+  const before = new Set(Object.keys(process.env));
+  const saved: Record<string, string | undefined> = {};
+  for (const k of before) saved[k] = process.env[k];
+  process.loadEnvFile(file);
+  // loadEnvFile overrides; restore anything that was already set.
+  for (const k of before) if (saved[k] !== undefined) process.env[k] = saved[k];
+  return Object.keys(process.env).filter((k) => !before.has(k));
 }

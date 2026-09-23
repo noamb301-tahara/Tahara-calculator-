@@ -156,3 +156,20 @@ describe("text helpers", () => {
     expect(labelSimilarity("Settings", "Billing")).toBeLessThan(0.5);
   });
 });
+
+describe(".env loading", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { loadDotEnv } = await import("../src/node/load-config");
+  it("loads keys from .env without overriding real environment variables", () => {
+    const dir = mkdtempSync(join(tmpdir(), "env-"));
+    writeFileSync(join(dir, ".env"), "STUDIO_TEST_A=from-file\nSTUDIO_TEST_B=from-file\n");
+    process.env.STUDIO_TEST_B = "from-env";
+    const added = loadDotEnv(dir);
+    expect(process.env.STUDIO_TEST_A).toBe("from-file");
+    expect(process.env.STUDIO_TEST_B).toBe("from-env");
+    expect(added).toContain("STUDIO_TEST_A");
+    expect(loadDotEnv(join(dir, "missing"))).toEqual([]);
+  });
+});
