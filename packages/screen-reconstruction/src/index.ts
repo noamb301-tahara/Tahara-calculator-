@@ -58,6 +58,7 @@ interface State {
   selections: Record<string, string>;
   toggles: Record<string, boolean>;
   toast: string | null;
+  activeTab: string | null;
 }
 
 const frameByFile = (frames: FramesAnalysisResult, file: string | null) => (file ? frames.analyses.find((a) => a.file === file) ?? null : null);
@@ -141,15 +142,28 @@ function gatherOptions(frames: FramesAnalysisResult, labelBox: BBox, label: stri
 
 function renderScreen(state: State, app: AppModel, appName: string, counter: Map<string, number>): ScreenDefinition {
   const page = buildPage(pageLines(state.page, app, state.dialog?.bbox ?? null));
+  // Initial toggle states come from the steps ("turn off X" ⇒ X starts on).
+  const setToggles = (els: ScreenElement[]) => {
+    for (const el of els) {
+      if (el.kind === "setting_row" && el.control?.kind === "toggle" && state.toggles[el.control.id] !== undefined) el.control = { ...el.control, on: state.toggles[el.control.id]! };
+      if ("children" in el && Array.isArray(el.children)) setToggles(el.children);
+    }
+  };
+  setToggles(page.content);
   const title = page.title ?? state.page.pageTitle ?? appName;
   const apply = (els: ScreenElement[]): ScreenElement[] =>
     els.map((el) => {
+      if (el.kind === "tabs" && state.activeTab) {
+        const tab = el.tabs.find((t) => labelSimilarity(t.label, state.activeTab!) > 0.85);
+        if (tab) return { ...el, active: tab.id };
+      }
       if (el.kind === "input" && state.values[el.id] !== undefined) return { ...el, value: state.values[el.id] };
       if (el.kind === "dropdown" && state.selections[el.id]) return { ...el, value: state.selections[el.id]! };
       if (el.kind === "toggle" && state.toggles[el.id] !== undefined) return { ...el, on: state.toggles[el.id]! };
       if ("children" in el && Array.isArray(el.children)) return { ...el, children: apply(el.children) } as ScreenElement;
       return el;
     });
+  page.content = apply(page.content);
   const overlays: Overlay[] = [];
   if (state.dialog) overlays.push({ kind: "dialog", id: state.dialog.id, title: state.dialog.title, body: apply(state.dialog.body), actions: state.dialog.actions, open: true });
   if (state.toast) overlays.push({ kind: "toast", id: "toast-1", text: state.toast, tone: "success", open: true });
@@ -165,7 +179,13 @@ function renderScreen(state: State, app: AppModel, appName: string, counter: Map
     direction: "ltr",
     browser: { url: `app.${slugify(appName, 20)}.example.com/${base}` },
     app: { name: appName },
-    topbar: { search: app.search ? { placeholder: app.search } : undefined, actions: [], user: app.hasAvatar ? { name: "Account Owner", id: "topbar-user" } : undefined },
+    topbar: {
+      search: app.search ? { placeholder: app.search } : undefined,
+      nav: app.topNav.map((i) => ({ ...i, active: labelSimilarity(i.label, title) > 0.85 || undefined })),
+      showBrand: !app.nav.length,
+      actions: [],
+      user: app.hasAvatar ? { name: "Account Owner", id: "topbar-user" } : undefined,
+    },
     sidebar: app.nav.length ? { position: "left", items: nav, footer: [] } : undefined,
     header: page.title ? { title: page.title, actions: page.headerActions } : undefined,
     content: groupIntoCards(page.content),
@@ -191,13 +211,18 @@ function ensureTarget(screen: ScreenDefinition, step: TutorialStep, notes: strin
       return id;
     }
   }
+  const top = screen.topbar?.nav.find((i) => sim(i.label) > 0.8);
+  if (top && (want === "link" || want === "tab" || want === "menu_item" || want === "button" || want === "sidebar_item")) {
+    // A top-nav item wins only if no tab/page element carries the same label.
+    if (!findTabLabel(screen.content, label)) return top.id;
+  }
   // Dialogs first when one is open (the action happens inside it).
   const dialog = screen.overlays.find((o): o is Extract<Overlay, { kind: "dialog" }> => o.kind === "dialog" && o.open);
   const pools: ScreenElement[][] = [];
   if (dialog) pools.push(dialog.body, dialog.actions);
   pools.push(screen.header?.actions ?? [], screen.content, screen.topbar?.actions ?? []);
   for (const pool of pools) {
-    const hit = findByLabel(pool, label);
+    const hit = findByLabel(pool, label, step.action.type);
     if (hit) return hit;
   }
   if (step.action.target_type === "icon" && screen.topbar?.user) return screen.topbar.user.id ?? "topbar-user";
@@ -208,35 +233,45 @@ function ensureTarget(screen: ScreenDefinition, step: TutorialStep, notes: strin
   return injected.id;
 }
 
-function findByLabel(els: ScreenElement[], label: string): string | null {
-  for (const el of els) {
-    const text = "label" in el ? el.label : el.kind === "text" ? el.text : el.kind === "card" ? el.title : undefined;
-    if (text && labelSimilarity(text, label) > 0.8) {
-      // Teaching accuracy: show exactly the label the viewer must look for (fixes OCR typos like "sena invite").
-      if ("label" in el && typeof el.label === "string") (el as { label: string }).label = label;
-      else if (el.kind === "text") (el as { text: string }).text = label;
-      if ("id" in el && el.id) return el.id;
-      if (el.kind === "text") {
+function findTabLabel(els: ScreenElement[], label: string): boolean {
+  return els.some((el) => (el.kind === "tabs" && el.tabs.some((t) => labelSimilarity(t.label, label) > 0.8)) || ("children" in el && Array.isArray(el.children) && findTabLabel(el.children, label)));
+}
+
+/** Best match by label across all nested elements (not the first fuzzy hit: "Notifications" ≠ "Email notifications"). */
+function findByLabel(els: ScreenElement[], label: string, prefer?: TutorialStep["action"]["type"]): string | null {
+  type Hit = { sim: number; bonus: number; apply: () => string };
+  const hits: Hit[] = [];
+  const consider = (text: string | undefined, bonus: number, apply: () => string) => {
+    if (!text) return;
+    const sim = labelSimilarity(text, label);
+    if (sim > 0.8) hits.push({ sim, bonus, apply });
+  };
+  const wantsToggle = prefer === "toggle" || prefer === "check";
+  const walk = (list: ScreenElement[]) => {
+    for (const el of list) {
+      const text = "label" in el ? el.label : el.kind === "text" ? el.text : el.kind === "card" ? el.title : undefined;
+      const kindBonus = wantsToggle && (el.kind === "setting_row" || el.kind === "toggle" || el.kind === "checkbox") ? 0.2 : 0;
+      consider(text, kindBonus, () => {
+        // Teaching accuracy: show exactly the label the viewer must look for (fixes OCR typos like "sena invite").
+        if ("label" in el && typeof el.label === "string") (el as { label: string }).label = label;
+        else if (el.kind === "text") (el as { text: string }).text = label;
+        if ("id" in el && el.id) return el.id;
         (el as { id?: string }).id = idFor("el", label);
         return (el as { id: string }).id;
-      }
+      });
+      if (el.kind === "tabs") for (const t of el.tabs) consider(t.label, wantsToggle ? -0.2 : 0, () => t.id);
+      if (el.kind === "table") for (const r of el.rows) for (const c of r.cells) consider(c, -0.05, () => r.id);
+      const kids: ScreenElement[] = [];
+      if ("children" in el && Array.isArray(el.children)) kids.push(...el.children);
+      if (el.kind === "card" && el.actions) kids.push(...el.actions);
+      if (el.kind === "setting_row" && el.control) kids.push(el.control);
+      if (kids.length) walk(kids);
     }
-    if (el.kind === "tabs") {
-      const tab = el.tabs.find((t) => labelSimilarity(t.label, label) > 0.8);
-      if (tab) return tab.id;
-    }
-    if (el.kind === "table") {
-      const row = el.rows.find((r) => r.cells.some((c) => labelSimilarity(c, label) > 0.85));
-      if (row) return row.id;
-    }
-    const kids: ScreenElement[] = [];
-    if ("children" in el && Array.isArray(el.children)) kids.push(...el.children);
-    if (el.kind === "card" && el.actions) kids.push(...el.actions);
-    if (el.kind === "setting_row" && el.control) kids.push(el.control);
-    const nested = kids.length ? findByLabel(kids, label) : null;
-    if (nested) return nested;
-  }
-  return null;
+  };
+  walk(els);
+  if (!hits.length) return null;
+  hits.sort((a, b) => b.sim + b.bonus - (a.sim + a.bonus));
+  return hits[0]!.apply();
 }
 
 function injectTarget(screen: ScreenDefinition, dialog: Extract<Overlay, { kind: "dialog" }> | null, step: TutorialStep): { id: string; kind: string } {
@@ -249,7 +284,10 @@ function injectTarget(screen: ScreenDefinition, dialog: Extract<Overlay, { kind:
     el = { kind: "dropdown", id: idFor("dd", label), label, value: "default", options: [{ id: "default", label: "Select…" }, { id: slugify(v, 30), label: v }] };
   } else if (t === "toggle" || t === "check") el = { kind: "setting_row", id: idFor("row", label), label, control: { kind: "toggle", id: idFor("toggle", label), label, on: false } };
   else el = { kind: "button", id: idFor("btn", label), label, variant: "primary" };
+  const submitLike = /^(save|submit|apply|continue|done|confirm|send|update|finish|next)\b/i.test(label);
   if (dialog) (el.kind === "button" ? dialog.actions : dialog.body).push(el);
+  // Form buttons (Save changes, Submit…) sit after the fields; other actions in the page header.
+  else if (el.kind === "button" && submitLike) screen.content.push({ kind: "row", justify: "start", children: [el] });
   else if (el.kind === "button" && screen.header) screen.header.actions.push(el);
   else screen.content.unshift(el);
   return { id: t === "toggle" || t === "check" ? idFor("toggle", label) : (el as { id: string }).id, kind: el.kind };
@@ -288,7 +326,10 @@ export function reconstructScreens(input: ReconstructInput): ReconstructResult {
 
   // 1) Walk the steps, evolving the UI state; render one screen per state.
   const states: State[] = [];
-  let state: State = { page: firstFrame, dialog: null, values: {}, selections: {}, toggles: {}, toast: null };
+  // Toggles the tutorial switches start in the opposite of their target state.
+  const initialToggles: Record<string, boolean> = {};
+  for (const s of steps) if (s.action.type === "toggle" || s.action.type === "check") initialToggles[idFor("toggle", s.action.required_real_label)] = s.action.value === "off";
+  let state: State = { page: firstFrame, dialog: null, values: {}, selections: {}, toggles: initialToggles, toast: null, activeTab: null };
   for (const step of steps) {
     states.push(state);
     const before = frameByFile(frames, step.source.frame_before) ?? state.page;
@@ -298,7 +339,7 @@ export function reconstructScreens(input: ReconstructInput): ReconstructResult {
     const label = step.action.required_real_label;
     if (step.action.type === "type" && step.action.value) next.values[idFor("input", label)] = step.action.value;
     else if (step.action.type === "select" && step.action.value) next.selections[idFor("dd", label)] = slugify(step.action.value, 30);
-    else if (step.action.type === "toggle" || step.action.type === "check") next.toggles[idFor("toggle", label)] = true;
+    else if (step.action.type === "toggle" || step.action.type === "check") next.toggles[idFor("toggle", label)] = step.action.value !== "off";
     else if (after && said.startsWith("נפתח החלון")) {
       const dlg = buildDialog(after, before, app, steps, frames);
       if (dlg) next.dialog = dlg;
@@ -308,11 +349,14 @@ export function reconstructScreens(input: ReconstructInput): ReconstructResult {
       next.dialog = null;
       next.values = {};
       next.toast = /'(.+)'/.exec(said)?.[1] ?? "Done";
-    } else if (after && (said.startsWith("נפתח העמוד") || said.startsWith("מופיע "))) {
+    } else if (after && (said.startsWith("נפתח העמוד") || said.startsWith("מופיע ") || said.startsWith("נפתחת הלשונית"))) {
       next.page = after;
       next.dialog = null;
       next.values = {};
+      next.activeTab = null;
     }
+    // A clicked tab stays selected on the screen that follows.
+    if (step.action.target_type === "tab") next.activeTab = label;
     state = next;
   }
   states.push(state);
@@ -330,7 +374,7 @@ export function reconstructScreens(input: ReconstructInput): ReconstructResult {
   // 3) Dummy data everywhere except real UI labels.
   // Only labels without personal data are protected; a "nav item" that is really a name or an amount gets replaced.
   const protect = new Set<string>([appName, ...steps.map((s) => s.action.required_real_label)]);
-  for (const n of app.nav) if (detectSensitive(n.label).length === 0) protect.add(n.label);
+  for (const n of [...app.nav, ...app.topNav]) if (detectSensitive(n.label).length === 0) protect.add(n.label);
   const labels = new Set<string>();
   for (const sc of rendered) collectLabels(sc, labels);
   for (const l of labels) if (detectSensitive(l).length === 0) protect.add(l);
@@ -440,6 +484,7 @@ function canonicalizeLabels(sc: ScreenDefinition, labels: string[]) {
     walk(o.actions);
   }
   for (const n of sc.sidebar?.items ?? []) n.label = fix(n.label);
+  for (const n of sc.topbar?.nav ?? []) n.label = fix(n.label);
 }
 
 function collectLabels(sc: ScreenDefinition, into: Set<string>) {

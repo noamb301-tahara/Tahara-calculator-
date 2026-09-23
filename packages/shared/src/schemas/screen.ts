@@ -207,6 +207,10 @@ export const ScreenDefinitionSchema = z.object({
     .object({
       title: z.string().optional(),
       search: z.object({ placeholder: z.string() }).optional(),
+      /** Horizontal top navigation (apps without a sidebar). */
+      nav: z.array(NavItemSchema).default([]),
+      /** Show the product logo/name in the top bar (when there is no sidebar). */
+      showBrand: z.boolean().default(false),
       actions: z.array(ScreenElementSchema).default([]),
       user: z.object({ name: z.string(), id: z.string().optional() }).optional(),
     })

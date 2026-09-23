@@ -33,7 +33,7 @@ export async function ocrColoredControls(file: string, frameW: number, frameH: n
     const ch = c.maxY - c.minY + 1;
     const fill = c.area / (cw * ch);
     const areaFrac = (cw * ch) / (W * h);
-    return cw / ch >= 1.6 && cw / ch <= 14 && fill > 0.42 && areaFrac > 0.0012 && areaFrac < 0.05 && ch >= 12;
+    return cw / ch >= 1.6 && cw / ch <= 26 && fill > 0.42 && areaFrac > 0.0012 && areaFrac < 0.05 && ch >= 12;
   });
   if (!comps.length) return [];
   const sx = frameW / W;

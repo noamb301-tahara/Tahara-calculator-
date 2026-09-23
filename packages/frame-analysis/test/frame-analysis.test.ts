@@ -77,3 +77,18 @@ describe("screen region", async () => {
     expect(r.y).toBeLessThan(300);
   });
 });
+
+describe("layout with detected chrome", async () => {
+  const { analyzeLayout } = await import("../src/layout");
+  const line = (text: string, x: number, y: number, w = 100) => ({ text, confidence: 90, bbox: { x, y, w, h: 20 } });
+  const region = { x: 20, y: 288, w: 1040, h: 1404 };
+  it("takes sidebar items only from inside the sidebar band, not an overlapping dialog", () => {
+    const L = analyzeLayout([line("Team", 50, 530, 60), line("Settings", 50, 650, 90), line("Role", 226, 997, 51), line("Email address", 226, 884, 170)], region, { detected: true, sidebar: { x: 20, y: 288, w: 248, h: 1404 }, topbar: null });
+    expect(L.sidebar.map((l) => l.text)).toEqual(["Team", "Settings"]);
+  });
+  it("treats left-aligned page text as content when no sidebar colour band exists", () => {
+    const L = analyzeLayout([line("Hi Dana", 65, 430), line("Invoice 1", 89, 580), line("Thomas", 87, 634), line("Northwind", 89, 688)], region, { detected: true, sidebar: null, topbar: { x: 36, y: 300, w: 1008, h: 88 } });
+    expect(L.sidebar).toEqual([]);
+    expect(L.content).toHaveLength(4);
+  });
+});

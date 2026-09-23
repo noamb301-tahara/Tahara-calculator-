@@ -59,3 +59,14 @@ describe("action fusion", () => {
     expect(other!.confidence).toBeLessThan(0.7);
   });
 });
+
+describe("toggle cues", () => {
+  it("keeps the direction of a toggle", () => {
+    const c = parseCues([
+      { id: "a", start: 0, end: 2, text: "Turn off Email notifications." },
+      { id: "b", start: 2, end: 4, text: "Enable Dark mode." },
+    ]);
+    expect(c[0]).toMatchObject({ action: "toggle", value: "off" });
+    expect(c[1]).toMatchObject({ action: "toggle", value: "on" });
+  });
+});

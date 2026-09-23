@@ -20,7 +20,8 @@
     "remotion:studio": "pnpm --filter @studio/renderer studio",
     "admin:dev": "pnpm --filter @studio/admin dev",
     "admin:build": "pnpm --filter @studio/admin build",
-    "doctor": "tsx scripts/studio.ts doctor"
+    "doctor": "tsx scripts/studio.ts doctor",
+    "accuracy": "tsx scripts/check-accuracy.ts"
   },
   "devDependencies": {
     "@studio/demo-data": "workspace:*",

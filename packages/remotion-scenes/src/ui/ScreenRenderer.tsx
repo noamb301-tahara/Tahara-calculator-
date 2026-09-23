@@ -55,6 +55,8 @@ export const ScreenRenderer: React.FC<{ screen: ScreenDefinition; runtime?: Scre
             title={screen.topbar.title}
             search={screen.topbar.search}
             user={screen.topbar.user}
+            nav={screen.topbar.nav}
+            brand={screen.topbar.showBrand || !screen.sidebar ? { name: screen.app.name, logoText: screen.app.logoText, accent: screen.app.accentColor } : null}
             actions={screen.topbar.actions.map((el, i) => (
               <ElementView key={elKey(el, i)} el={el} />
             ))}

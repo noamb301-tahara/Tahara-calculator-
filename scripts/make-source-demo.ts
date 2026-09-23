@@ -22,7 +22,18 @@ type Ev =
   | { type: "set"; dt: number; state: Record<string, unknown> }
   | { type: "type"; dt: number; text: string; dur: number };
 
-const beats: { text: string; events: Ev[] }[] = [
+interface Scenario {
+  html: string;
+  out: string;
+  beats: { text: string; events: Ev[] }[];
+}
+
+const SCENARIOS: Record<string, Scenario> = {
+  // Sidebar app: invite a teammate (dialog, typing, dropdown, toast).
+  taskly: {
+    html: "source-demo/app.html",
+    out: "short-demo",
+    beats: [
   { text: "Here's how to invite a teammate in Taskly.", events: [] },
   {
     text: "First, click Team in the left sidebar.",
@@ -71,7 +82,55 @@ const beats: { text: string; events: Ev[] }[] = [
     ],
   },
   { text: "That's it. Your teammate will get an email invitation.", events: [] },
-];
+],
+  },
+  // Top-navigation app: turn off a notification toggle (tabs, toggle, save + toast).
+  brightdesk: {
+    html: "source-demo/brightdesk.html",
+    out: "short-brightdesk",
+    beats: [
+      { text: "In this short I'll show you how to stop email notifications in Brightdesk.", events: [] },
+      {
+        text: "First, click Settings in the top menu.",
+        events: [
+          { type: "move", dt: 0.5, to: "tn-settings", dur: 1.2 },
+          { type: "click", dt: 1.9, target: "tn-settings", label: "Settings", action: "click" },
+          { type: "set", dt: 2.0, state: { page: "settings" } },
+        ],
+      },
+      {
+        text: "Now open the Notifications tab.",
+        events: [
+          { type: "move", dt: 0.4, to: "tab-notifications", dur: 1.0 },
+          { type: "click", dt: 1.6, target: "tab-notifications", label: "Notifications", action: "click" },
+          { type: "set", dt: 1.7, state: { tab: "notifications" } },
+        ],
+      },
+      {
+        text: "Turn off Email notifications.",
+        events: [
+          { type: "move", dt: 0.4, to: "sw-email", dur: 1.0 },
+          { type: "click", dt: 1.6, target: "sw-email", label: "Email notifications", action: "toggle" },
+          { type: "set", dt: 1.7, state: { emailOn: false } },
+        ],
+      },
+      {
+        text: "Finally, click Save changes.",
+        events: [
+          { type: "move", dt: 0.4, to: "btn-save", dur: 1.0 },
+          { type: "click", dt: 1.6, target: "btn-save", label: "Save changes", action: "click" },
+          { type: "set", dt: 1.7, state: { toast: true } },
+        ],
+      },
+      { text: "Done. You will no longer get an email for every message.", events: [] },
+    ],
+  },
+};
+
+const scenarioName = process.argv[2] ?? "taskly";
+const scenario = SCENARIOS[scenarioName];
+if (!scenario) throw new Error(`Unknown scenario "${scenarioName}". Available: ${Object.keys(SCENARIOS).join(", ")}`);
+const beats = scenario.beats;
 
 const root = resolve(import.meta.dirname, "..");
 const outDir = resolve(root, "input");
@@ -97,7 +156,7 @@ const total = t + 0.6;
 const exe = (await findBrowserExecutable()) ?? undefined;
 const browser = await chromium.launch({ executablePath: exe });
 const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
-await page.goto(`file://${resolve(import.meta.dirname, "source-demo/app.html")}`);
+await page.goto(`file://${resolve(import.meta.dirname, scenario.html)}`);
 await page.evaluate((e) => (window as unknown as { setEvents: (x: unknown) => void }).setEvents(e), absEvents.map(({ dt: _dt, ...e }) => e));
 const frames = Math.ceil(total * FPS);
 for (let f = 0; f < frames; f++) {
@@ -112,16 +171,16 @@ const filters = clips.map((c, i) => `[${i}:a]aresample=44100,adelay=${Math.round
 filters.push(`${clips.map((_, i) => `[a${i}]`).join("")}amix=inputs=${clips.length}:normalize=0,apad=whole_dur=${total.toFixed(2)}[out]`);
 const narration = join(work, "narration.wav");
 await ffmpeg([...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-t", total.toFixed(2), narration]);
-const video = resolve(outDir, "short-demo.mp4");
+const video = resolve(outDir, `${scenario.out}.mp4`);
 await ffmpeg(["-framerate", String(FPS), "-i", join(work, "f%05d.jpg"), "-i", narration, "-r", "30", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-c:a", "aac", "-shortest", video]);
 
 // 4) Sidecar transcript + ground truth
-await writeJson(resolve(outDir, "short-demo.transcript.json"), {
+await writeJson(resolve(outDir, `${scenario.out}.transcript.json`), {
   language: "en",
   source: "narration script (synthetic source video)",
   segments: clips.map((c, i) => ({ id: `seg-${i + 1}`, start: Number(c.start.toFixed(2)), end: Number((c.start + c.dur).toFixed(2)), text: c.text })),
 });
-await writeJson(resolve(outDir, "short-demo.truth.json"), {
+await writeJson(resolve(outDir, `${scenario.out}.truth.json`), {
   actions: absEvents.filter((e) => e.type === "click").map((e) => ({ t: e.t, target: (e as { target: string }).target, label: (e as { label: string }).label, action: (e as { action: string }).action })),
 });
 await writeFile(resolve(outDir, "README.txt"), "short-demo.* are generated by `pnpm demo:source` (synthetic test input).\n");

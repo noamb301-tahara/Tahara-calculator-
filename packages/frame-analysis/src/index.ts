@@ -20,12 +20,14 @@ import { ocrAvailable, ocrImage } from "./ocr";
 import { ocrColoredControls } from "./buttons";
 import { planFrameSamples } from "./sampling";
 import { analyzeLayout, estimateScreenRegion, heuristicElements } from "./layout";
+import { combineChrome, detectAppChrome } from "./chrome";
 
 export * from "./motion";
 export * from "./ocr";
 export * from "./sampling";
 export * from "./layout";
 export * from "./buttons";
+export * from "./chrome";
 
 /** Optional vision model hook (Claude vision), injected by the pipeline. */
 export interface VisionAnalyzer {
@@ -67,7 +69,12 @@ export async function analyzeFrames(input: AnalyzeFramesInput): Promise<FramesAn
     frames.push({ id: frameIdFor(s.time), time: s.time, file: rel, reasons: s.reasons });
   }
 
-  const region = estimateScreenRegion(ingest.media.width, ingest.media.height, motion.events, motion.cursor);
+  // Screen area + chrome from pixels (several frames must agree); motion is the fallback.
+  const probeFrames = frames.filter((_, i) => i % Math.max(1, Math.floor(frames.length / 5)) === 0).slice(0, 6);
+  const chromes = await Promise.all(probeFrames.map((f) => detectAppChrome(join(projectDir, f.file), ingest.media.width, ingest.media.height).catch(() => null)));
+  const agreed = combineChrome(chromes.filter((c): c is NonNullable<typeof c> => Boolean(c)));
+  const region = agreed.region ?? estimateScreenRegion(ingest.media.width, ingest.media.height, motion.events, motion.cursor);
+  const chrome = { detected: Boolean(agreed.region), sidebar: agreed.sidebar, topbar: agreed.topbar };
   const canOcr = await ocrAvailable();
   if (!canOcr) input.log?.("tesseract not installed — OCR skipped (install tesseract-ocr for label detection)");
 
@@ -85,7 +92,7 @@ export async function analyzeFrames(input: AnalyzeFramesInput): Promise<FramesAn
       }
       ocr.lines.sort((a, b) => a.bbox.y - b.bbox.y || a.bbox.x - b.bbox.x);
     }
-    const layout = analyzeLayout(ocr.lines, region);
+    const layout = analyzeLayout(ocr.lines, region, chrome);
     let elements = heuristicElements(layout);
     let description: string | null = null;
     let pageTitle = layout.title?.text ?? null;
@@ -117,6 +124,7 @@ export async function analyzeFrames(input: AnalyzeFramesInput): Promise<FramesAn
     sensitive,
     providers: { ocr: canOcr ? "tesseract" : "none", vision: input.vision?.name ?? null },
     region,
+    chrome,
   });
 }
 

@@ -20,7 +20,10 @@ pnpm install
 cp .env.example .env            # מפתחות רק כאן — לעולם לא בקוד
 
 pnpm demo:render                # הדרכת דמו ידנית → output/demo-2fa/final-short.mp4 (בלי AI)
-pnpm demo:source                # מייצר סרטון מקור סינתטי לבדיקות → input/short-demo.mp4
+pnpm demo:source                # סרטון מקור סינתטי (סרגל צד, דיאלוג) → input/short-demo.mp4
+pnpm demo:source brightdesk     # מקור שני (ניווט עליון, לשוניות, מתג) → input/short-brightdesk.mp4
+pnpm doctor                     # אילו מפתחות/כלים/ספקים ישמשו בהרצה (בלי להדפיס ערכי מפתחות)
+pnpm accuracy                   # השוואת השלבים שזוהו מול *.truth.json (זמן, תווית, סוג, רכיב יעד)
 pnpm e2e                        # מקור → ניתוח → שלבים → Demo UI → עברית → קול → רינדור
 pnpm batch                      # כל הסרטונים בתיקיית input/
 pnpm admin:build && pnpm --filter @studio/admin start   # לוח בקרה: http://localhost:3100
@@ -57,6 +60,8 @@ CLI מלא (`pnpm studio …`):
 * Fidelity: `faithful` (ברירת מחדל לסרטוני "איפה ללחוץ"), `simplified`, `conceptual`.
 
 ## פרטיות
+
+בדיקה כפולה: (1) לפני הרינדור — כל מחרוזת רגישה שנמצאה במקור ונשארה במסכים מוחלפת, ואם משהו נשאר ההרצה נעצרת; (2) אחרי הרינדור — OCR על הסרטון המוגמר, ואם מופיע מידע מהמקור הקובץ נדחה (`final-short.REJECTED.mp4`).
 
 אימיילים, טלפונים, שמות, מזהי חשבון, כתובות, כרטיסי אשראי, מפתחות API, סיסמאות וטוקנים מזוהים ומוחלפים בנתוני דמה עקביים (`example.com`, `(555) 01x-xxxx`) לפני שהם מגיעים ל-Demo UI; ב-`source-analysis.json` הם מושחרים (`[email]`).
 

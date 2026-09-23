@@ -63,12 +63,14 @@ export function parseCues(segments: TranscriptSegment[]): Cue[] {
       // "your teammate's email address" → ["teammate's email address", "email address", "address"]
       const words = phrase.replace(/'s\b/g, "").split(/\s+/).filter(Boolean);
       const targets = [phrase, ...words.map((_, i) => words.slice(i).join(" ")).slice(1)].filter((t, i, a) => t && a.indexOf(t) === i);
+      // Toggle direction matters for teaching accuracy: "turn off" must never become "turn on".
+      const toggleTo = action === "toggle" ? (/off|disable|uncheck/.test(verb) ? "off" : /on|enable|^check|tick/.test(verb) ? "on" : null) : null;
       local.push({
         action: action === "open_menu" && kind !== "menu" && kind !== "dropdown" ? "click" : action,
         verb,
         targets,
         location: locM?.[1]?.trim() ?? null,
-        value: null,
+        value: toggleTo,
         container: null,
         time,
         windowStart: seg.start - 0.5,

@@ -123,7 +123,14 @@ const NavRow: React.FC<{ item: NavItem; depth: number }> = ({ item, depth }) => 
   );
 };
 
-export const Topbar: React.FC<{ title?: string; search?: { placeholder: string }; user?: { name: string; id?: string }; actions?: React.ReactNode }> = ({ title, search, user, actions }) => {
+export const Topbar: React.FC<{
+  title?: string;
+  search?: { placeholder: string };
+  user?: { name: string; id?: string };
+  actions?: React.ReactNode;
+  nav?: NavItem[];
+  brand?: { name: string; logoText?: string; accent?: string } | null;
+}> = ({ title, search, user, actions, nav, brand }) => {
   const t = useTheme();
   const searchTarget = useTarget(search ? "topbar-search" : undefined);
   const userId = user ? user.id ?? "topbar-user" : undefined;
@@ -131,7 +138,22 @@ export const Topbar: React.FC<{ title?: string; search?: { placeholder: string }
   const { menusByAnchor } = useScreenContext();
   return (
     <div style={{ height: 88, flexShrink: 0, background: t.ui.topbarBg, borderBottom: `${t.ui.borderWidth}px solid ${t.ui.border}`, display: "flex", alignItems: "center", gap: 18, padding: "0 26px" }}>
+      {brand ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginInlineEnd: 10 }}>
+          <div style={{ width: 44, height: 44, borderRadius: t.ui.radiusSm + 2, background: brand.accent ?? t.ui.primary, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 20 }}>
+            {(brand.logoText ?? brand.name).slice(0, 2)}
+          </div>
+          <div style={{ fontSize: 25, fontWeight: 800, color: t.ui.text, whiteSpace: "nowrap" }}>{brand.name}</div>
+        </div>
+      ) : null}
       {title ? <div style={{ fontSize: 25, fontWeight: 700, color: t.ui.text, whiteSpace: "nowrap" }}>{title}</div> : null}
+      {nav?.length ? (
+        <div style={{ display: "flex", alignItems: "stretch", gap: 6, height: "100%" }}>
+          {nav.map((n) => (
+            <TopNavItem key={n.id} item={n} />
+          ))}
+        </div>
+      ) : null}
       {search ? (
         <div {...searchTarget} style={{ flex: 1, maxWidth: 420, height: 52, borderRadius: t.ui.radiusSm, background: t.ui.surfaceAlt, display: "flex", alignItems: "center", gap: 10, padding: "0 16px", color: t.ui.muted, fontSize: 21 }}>
           <Icon name="search" size={22} />
@@ -150,6 +172,34 @@ export const Topbar: React.FC<{ title?: string; search?: { placeholder: string }
           {userId && menusByAnchor[userId] ? <AnchoredMenu menu={menusByAnchor[userId]!} /> : null}
         </div>
       ) : null}
+    </div>
+  );
+};
+
+const TopNavItem: React.FC<{ item: NavItem }> = ({ item }) => {
+  const t = useTheme();
+  const { rt, menusByAnchor } = useScreenContext();
+  const target = useTarget(item.id);
+  const pressed = usePressed(item.id);
+  const active = rt.active ? rt.active === item.id : Boolean(item.active);
+  const menu = menusByAnchor[item.id];
+  return (
+    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+      <div
+        {...target}
+        style={{
+          padding: "10px 14px",
+          fontSize: 22,
+          fontWeight: active ? 700 : 500,
+          color: active ? t.ui.primary : t.ui.muted,
+          borderBottom: `4px solid ${active ? t.ui.primary : "transparent"}`,
+          transform: pressed ? "scale(0.96)" : "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {item.label}
+      </div>
+      {menu ? <AnchoredMenu menu={menu} /> : null}
     </div>
   );
 };

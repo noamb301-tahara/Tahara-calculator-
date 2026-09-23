@@ -24,7 +24,7 @@ export function stepTitle(step: TutorialStep): string {
   switch (step.action.type) {
     case "toggle":
     case "check":
-      return `מפעילים את ${label}`;
+      return step.action.value === "off" ? `מכבים את ${label}` : `מפעילים את ${label}`;
     case "type":
       return `ממלאים את ${label}`;
     case "select":
@@ -50,7 +50,7 @@ export function instructionFromAction(step: TutorialStep): string {
   switch (step.action.type) {
     case "toggle":
     case "check":
-      return `הפעילו את ${label}${w}.`;
+      return step.action.value === "off" ? `כבו את ${label}${w}.` : `הפעילו את ${label}${w}.`;
     case "type": {
       // Emails / long values are shown on screen, not read aloud.
       const v = step.action.value;
@@ -76,6 +76,8 @@ export function instructionFromAction(step: TutorialStep): string {
 }
 
 const LOCATION_WORDS: [RegExp, string][] = [
+  [/top navigation|top nav|top menu/i, "בתפריט העליון"],
+  [/settings list/i, "ברשימת ההגדרות"],
   [/top[- ]?right|upper right/i, "בפינה הימנית העליונה"],
   [/top[- ]?left|upper left/i, "בפינה השמאלית העליונה"],
   [/bottom[- ]?right|lower right/i, "בפינה הימנית התחתונה"],

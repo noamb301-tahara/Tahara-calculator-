@@ -137,6 +137,7 @@ export function collectTargetIds(screen: ScreenDefinition): Set<string> {
   visitEls(screen.topbar?.actions);
   visitNav(screen.sidebar?.items);
   visitNav(screen.sidebar?.footer);
+  visitNav(screen.topbar?.nav);
   if (screen.topbar?.search) ids.add("topbar-search");
   if (screen.topbar?.user) ids.add(screen.topbar.user.id ?? "topbar-user");
   for (const o of screen.overlays) {

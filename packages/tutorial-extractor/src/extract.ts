@@ -82,7 +82,7 @@ export function newLines(before: FrameAnalysis | null, after: FrameAnalysis | nu
 function afterDescription(a: DetectedAction, before: FrameAnalysis | null, after: FrameAnalysis | null, region: BBox): { he: string; kind: "dialog" | "page" | "toast" | "state" | "none"; title: string | null } {
   if (a.action === "type") return { he: a.value ? "הטקסט מופיע בשדה" : "השדה מתמלא", kind: "state", title: null };
   if (a.action === "select") return { he: a.value ? `'${a.value}' מופיע כאפשרות שנבחרה` : "האפשרות נבחרת", kind: "state", title: null };
-  if (a.action === "toggle") return { he: "המתג משנה את מצבו", kind: "state", title: null };
+  if (a.action === "toggle") return { he: a.value === "off" ? "המתג כבוי" : a.value === "on" ? "המתג דולק" : "המתג משנה את מצבו", kind: "state", title: null };
   const fresh = newLines(before, after).filter((l) => l.text.length > 2);
   const toast = fresh.find((l) => TOAST_WORDS.test(l.text));
   if (toast) return { he: `מופיעה הודעת אישור: '${toast.text}'`, kind: "toast", title: toast.text };
@@ -100,11 +100,12 @@ function afterDescription(a: DetectedAction, before: FrameAnalysis | null, after
   return { he: "המסך מתעדכן בהתאם", kind: "none", title: null };
 }
 
-function inferTargetType(a: DetectedAction, inSidebar: boolean, inDialog: boolean, inTopbar: boolean): TargetType {
+function inferTargetType(a: DetectedAction, inSidebar: boolean, inDialog: boolean, inTopbar: boolean, inTabRow: boolean): TargetType {
   if (a.action === "type") return "input";
   if (a.action === "select") return "dropdown";
   if (a.action === "toggle") return "toggle";
   if (inSidebar) return "sidebar_item";
+  if (inTabRow && !inTopbar) return "tab";
   const label = a.target ?? "";
   if (inDialog && BUTTON_WORDS.test(label)) return "dialog_button";
   if (inTopbar) return /^[A-Z]{1,2}$/.test(label) ? "icon" : "button";
@@ -120,14 +121,14 @@ export function inferTitle(transcript: Transcript, frames: FramesAnalysisResult)
   if (!app) {
     // Logo text = top-most sidebar line.
     for (const f of frames.analyses) {
-      const L = analyzeLayout(f.ocr.lines, frames.region);
+      const L = analyzeLayout(f.ocr.lines, frames.region, frames.chrome);
       if (L.sidebar[0]) {
         app = L.sidebar[0].text;
         break;
       }
     }
   }
-  const caption = frames.analyses[0] ? analyzeLayout(frames.analyses[0].ocr.lines, frames.region).outside.filter((l) => l.bbox.y < frames.region.y).sort((a, b) => b.bbox.h - a.bbox.h)[0] : undefined;
+  const caption = frames.analyses[0] ? analyzeLayout(frames.analyses[0].ocr.lines, frames.region, frames.chrome).outside.filter((l) => l.bbox.y < frames.region.y).sort((a, b) => b.bbox.h - a.bbox.h)[0] : undefined;
   const howTo = how?.[1]?.trim() ?? (caption ? /how to (.+)/i.exec(caption.text)?.[1] ?? null : null);
   const title = caption?.text ?? (howTo ? `How to ${howTo}` : "Tutorial");
   return { title: title.charAt(0).toUpperCase() + title.slice(1), howTo, app };
@@ -144,16 +145,30 @@ export function extractTutorial(input: ExtractInput): Tutorial {
   for (const [i, a] of actions.entries()) {
     const before = frameById(frames, a.beforeFrameId);
     const after = frameById(frames, a.afterFrameId);
-    const layout = before ? analyzeLayout(before.ocr.lines, region) : null;
+    const layout = before ? analyzeLayout(before.ocr.lines, region, frames.chrome) : null;
     const hit = (lines: { bbox: BBox }[] | undefined) => Boolean(a.bbox && lines?.some((l) => Math.abs(l.bbox.x - a.bbox!.x) < 4 && Math.abs(l.bbox.y - a.bbox!.y) < 4));
     const inSidebar = hit(layout?.sidebar);
     const inTopbar = hit(layout?.topbar);
     // Dialog: a big UI change covering most of the screen happened before this action and is still open.
     const inDialog = !inSidebar && steps.some((s) => s.what_user_sees_after.startsWith("נפתח החלון")) && !steps.some((s) => s.action.target_type === "dialog_button");
-    const targetType = inferTargetType(a, inSidebar, inDialog, inTopbar);
+    // A row of ≥3 short labels (the target among them) below the top bar = tabs.
+    const tLine = a.bbox && before ? before.ocr.lines.find((l) => Math.abs(l.bbox.x - a.bbox!.x) < 4 && Math.abs(l.bbox.y - a.bbox!.y) < 4) : undefined;
+    const inTabRow = Boolean(
+      tLine && before && before.ocr.lines.filter((l) => Math.abs(l.bbox.y + l.bbox.h / 2 - (tLine.bbox.y + tLine.bbox.h / 2)) < 10 && l.text.split(/\s+/).length <= 2 && l.source !== "control").length >= 3,
+    );
+    const targetType = inferTargetType(a, inSidebar, inDialog, inTopbar, inTabRow);
     const label = a.target ?? "?";
-    const desc = afterDescription(a, before, after, region);
-    const location = describeLocation(a.bbox, region, inSidebar, inDialog);
+    const baseDesc = afterDescription(a, before, after, region);
+    // Clicking a tab opens that tab — say so instead of quoting a random new line.
+    const desc = targetType === "tab" && inTabRowFor(a, before) && (baseDesc.kind === "page" || baseDesc.kind === "none") ? { ...baseDesc, he: `נפתחת הלשונית '${a.target}'` } : baseDesc;
+    const location =
+      inTopbar && targetType !== "icon"
+        ? "top navigation bar"
+        : targetType === "tab"
+          ? "tabs row"
+          : targetType === "toggle" && !inDialog
+            ? "settings list"
+            : describeLocation(a.bbox, region, inSidebar, inDialog);
     const small = a.bbox ? (a.bbox.w * a.bbox.h) / (region.w * region.h) < 0.02 : true;
     const step: TutorialStep = {
       id: stepId(i + 1),
@@ -235,6 +250,13 @@ export function extractTutorial(input: ExtractInput): Tutorial {
     style_preset: null,
     steps,
   });
+}
+
+function inTabRowFor(a: DetectedAction, before: FrameAnalysis | null): boolean {
+  if (!a.bbox || !before) return false;
+  const t = before.ocr.lines.find((l) => Math.abs(l.bbox.x - a.bbox!.x) < 4 && Math.abs(l.bbox.y - a.bbox!.y) < 4);
+  if (!t) return false;
+  return before.ocr.lines.filter((l) => Math.abs(l.bbox.y + l.bbox.h / 2 - (t.bbox.y + t.bbox.h / 2)) < 10 && l.text.split(/\s+/).length <= 2 && l.source !== "control").length >= 3;
 }
 
 function sentenceFor(t: Transcript, a: DetectedAction): string | null {

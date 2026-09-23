@@ -143,7 +143,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "analyze_frames",
-    version: 3,
+    version: 6,
     inputs: () => [PROJECT_FILES.media, PROJECT_FILES.transcriptJson, PROJECT_FILES.motion],
     params: (ctx) => ({ a: ctx.config.analysis, vision: ctx.llm ? ctx.config.llm.visionModel : null }),
     outputs: () => [PROJECT_FILES.framesAnalysis],
@@ -167,7 +167,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "detect_actions",
-    version: 2,
+    version: 3,
     inputs: () => [PROJECT_FILES.framesAnalysis, PROJECT_FILES.transcriptJson],
     params: (ctx) => ctx.config.thresholds.actionMin,
     outputs: () => [PROJECT_FILES.actions],
@@ -182,7 +182,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "extract_tutorial",
-    version: 3,
+    version: 7,
     inputs: () => [PROJECT_FILES.actions, PROJECT_FILES.framesAnalysis, PROJECT_FILES.transcriptJson, PROJECT_FILES.media],
     params: (ctx) => ({ th: ctx.config.thresholds, f: ctx.config.fidelity, llm: ctx.llm ? ctx.config.llm.model : null }),
     outputs: () => [PROJECT_FILES.tutorialAuto, PROJECT_FILES.sourceAnalysis],
@@ -244,7 +244,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "reconstruct_screens",
-    version: 4,
+    version: 8,
     inputs: () => [PROJECT_FILES.tutorial, PROJECT_FILES.framesAnalysis],
     params: (ctx) => ({ f: ctx.project.settings.fidelityMode ?? ctx.config.fidelity.mode }),
     outputs: () => [PROJECT_FILES.screens, PROJECT_FILES.tutorial],
@@ -262,7 +262,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "write_script",
-    version: 2,
+    version: 4,
     inputs: () => [PROJECT_FILES.tutorial],
     params: (ctx) => ({ wps: ctx.config.timing.wordsPerSecond, cta: ctx.config.style.ctaText, hook: ctx.project.settings.selectedHookId ?? null, llm: ctx.llm ? ctx.config.llm.model : null }),
     outputs: () => [PROJECT_FILES.script, PROJECT_FILES.scriptText, PROJECT_FILES.hooks],

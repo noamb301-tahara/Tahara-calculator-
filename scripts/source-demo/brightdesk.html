@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<!-- Second synthetic source: top navigation (no sidebar), tabs, a toggle, save + toast. Fake PII on purpose. -->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1080px; height: 1920px; background: #f3efe6; font-family: "DejaVu Sans", Arial, sans-serif; overflow: hidden; }
+  #caption { position: absolute; top: 60px; left: 60px; right: 60px; height: 170px; border-radius: 24px; background: #ffcc00; display: flex; align-items: center; justify-content: center; color: #111; font-size: 52px; font-weight: 800; text-align: center; }
+  #screen { position: absolute; top: 300px; left: 30px; width: 1020px; height: 1380px; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.15); }
+  #topnav { height: 90px; background: #0f766e; display: flex; align-items: center; padding: 0 26px; gap: 30px; color: #d1fae5; font-size: 25px; }
+  .brand { color: #fff; font-weight: 800; font-size: 30px; margin-right: 20px; }
+  .tn { padding: 10px 6px; border-bottom: 4px solid transparent; }
+  .tn.active { color: #fff; border-bottom-color: #fff; }
+  .avatar { margin-left: auto; width: 50px; height: 50px; border-radius: 50%; background: #fbbf24; color: #111; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; }
+  .page { padding: 34px; display: none; flex-direction: column; gap: 22px; }
+  .page.show { display: flex; }
+  h1 { margin: 0; font-size: 40px; color: #111827; }
+  .muted { color: #6b7280; font-size: 22px; }
+  .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px; font-size: 22px; }
+  .row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f3f4f6; }
+  .tabs { display: flex; gap: 28px; border-bottom: 2px solid #e5e7eb; font-size: 24px; }
+  .tab { padding: 14px 4px; color: #6b7280; }
+  .tab.active { color: #0f766e; border-bottom: 4px solid #0f766e; font-weight: 700; margin-bottom: -2px; }
+  .setting { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; border-bottom: 1px solid #f3f4f6; }
+  .setting .t { font-size: 25px; font-weight: 700; color: #111827; } .setting .d { font-size: 20px; color: #6b7280; margin-top: 4px; }
+  .switch { width: 74px; height: 40px; border-radius: 40px; background: #0f766e; position: relative; }
+  .switch::after { content: ""; position: absolute; top: 4px; left: 38px; width: 32px; height: 32px; border-radius: 50%; background: #fff; }
+  .switch.off { background: #d1d5db; } .switch.off::after { left: 4px; }
+  .btn { align-self: flex-start; background: #0f766e; color: #fff; font-size: 24px; font-weight: 700; padding: 16px 28px; border-radius: 10px; }
+  #toast { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 20px 30px; border-radius: 12px; font-size: 22px; display: none; }
+  #cursor { position: absolute; width: 44px; height: 44px; z-index: 100; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="caption">Stop email notifications</div>
+<div id="screen">
+  <div id="topnav"><div class="brand">Brightdesk</div><div class="tn" id="tn-home">Home</div><div class="tn" id="tn-inbox">Inbox</div><div class="tn" id="tn-reports">Reports</div><div class="tn" id="tn-settings">Settings</div><div class="avatar">RA</div></div>
+  <div class="page" id="page-home">
+    <h1>Hi Rachel Adams</h1>
+    <div class="muted">You have 12 new messages</div>
+    <div class="card"><div class="row"><span>Invoice INV-20931</span><span>$4,820.00</span></div><div class="row"><span>Thomas Becker</span><span>+44 20 7946 0958</span></div><div class="row"><span>Northwind Consulting</span><span>$12,300</span></div></div>
+  </div>
+  <div class="page" id="page-settings">
+    <h1>Settings</h1>
+    <div class="tabs"><div class="tab" id="tab-profile">Profile</div><div class="tab" id="tab-notifications">Notifications</div><div class="tab" id="tab-billing">Billing</div></div>
+    <div id="pane-profile"><div class="card"><div class="row"><span>Full name</span><span>Rachel Adams</span></div><div class="row"><span>Email</span><span>rachel.adams@northwind.io</span></div></div></div>
+    <div id="pane-notifications" style="display:none">
+      <div class="setting"><div><div class="t">Email notifications</div><div class="d">Get an email for every new message</div></div><div class="switch" id="sw-email"></div></div>
+      <div class="setting"><div><div class="t">Weekly summary</div><div class="d">A digest every Monday</div></div><div class="switch" id="sw-weekly"></div></div>
+      <div class="btn" id="btn-save">Save changes</div>
+    </div>
+  </div>
+  <div id="toast">Your preferences were saved</div>
+</div>
+<svg id="cursor" viewBox="0 0 32 32"><path d="M5 3 L5 25 L11 19.5 L15 28.5 L19 26.8 L15.2 18 L23 18 Z" fill="#000" stroke="#fff" stroke-width="2"/></svg>
+<script>
+  let EVENTS = [];
+  const $ = (id) => document.getElementById(id);
+  const centerOf = (id) => { const r = $(id).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  window.setEvents = (e) => { EVENTS = e; };
+  const ease = (p) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
+  window.renderAt = (t) => {
+    const s = { page: "home", tab: "profile", emailOn: true, toast: false };
+    for (const e of EVENTS) if (e.t <= t && e.type === "set") Object.assign(s, e.state);
+    $("page-home").classList.toggle("show", s.page === "home");
+    $("page-settings").classList.toggle("show", s.page === "settings");
+    $("tn-home").classList.toggle("active", s.page === "home");
+    $("tn-settings").classList.toggle("active", s.page === "settings");
+    for (const k of ["profile", "notifications", "billing"]) $("tab-" + k).classList.toggle("active", s.tab === k);
+    $("pane-profile").style.display = s.tab === "profile" ? "block" : "none";
+    $("pane-notifications").style.display = s.tab === "notifications" ? "block" : "none";
+    $("sw-email").classList.toggle("off", !s.emailOn);
+    $("toast").style.display = s.toast ? "block" : "none";
+    let pos = { x: 700, y: 1500 };
+    let press = 0;
+    for (const e of EVENTS) {
+      if (e.t > t) break;
+      if (e.type === "move") {
+        const to = centerOf(e.to);
+        const p = Math.min(1, (t - e.t) / e.dur);
+        const from = e.from || pos;
+        pos = { x: from.x + (to.x - from.x) * ease(p), y: from.y + (to.y - from.y) * ease(p) };
+        e.from = e.from || from;
+      }
+      if (e.type === "click" && t - e.t < 0.2) press = 1;
+    }
+    const c = $("cursor");
+    c.style.left = pos.x - 4 + "px";
+    c.style.top = pos.y - 3 + "px";
+    c.style.transform = press ? "scale(0.85)" : "none";
+  };
+</script>
+</body>
+</html>

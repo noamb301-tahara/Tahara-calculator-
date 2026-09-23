@@ -43,9 +43,27 @@ export function estimateScreenRegion(frameW: number, frameH: number, events: Mot
 
 const inside = (b: BBox, r: BBox) => b.x + b.w / 2 >= r.x && b.x + b.w / 2 <= r.x + r.w && b.y + b.h / 2 >= r.y && b.y + b.h / 2 <= r.y + r.h;
 
-export function analyzeLayout(lines: OcrLine[], region: BBox): LayoutAnalysis {
+export interface LayoutChrome {
+  detected: boolean;
+  sidebar: BBox | null;
+  topbar: BBox | null;
+}
+
+export function analyzeLayout(lines: OcrLine[], region: BBox, chrome: LayoutChrome | null = null): LayoutAnalysis {
   const outside = lines.filter((l) => !inside(l.bbox, region));
   const inRegion = lines.filter((l) => inside(l.bbox, region));
+
+  // Pixel-detected chrome is authoritative: it tells a real sidebar from left-aligned page text.
+  if (chrome?.detected) {
+    // Fully inside the band: a dialog overlapping the sidebar must not donate its labels to it.
+    const sb = chrome.sidebar;
+    const sidebar = sb ? inRegion.filter((l) => l.bbox.x >= sb.x - 2 && l.bbox.x + l.bbox.w <= sb.x + sb.w + 2 && inside(l.bbox, sb)) : [];
+    const sideSet = new Set(sidebar);
+    const topbar = inRegion.filter((l) => !sideSet.has(l) && (chrome.topbar ? inside(l.bbox, chrome.topbar) : l.bbox.y < region.y + region.h * 0.075));
+    const topSet = new Set(topbar);
+    const content = inRegion.filter((l) => !sideSet.has(l) && !topSet.has(l)).sort((a, b) => a.bbox.y - b.bbox.y || a.bbox.x - b.bbox.x);
+    return finish(region, sidebar, topbar, content, outside);
+  }
 
   // Sidebar: ≥3 short lines, left-aligned, in the left ~26% of the region.
   const leftCands = inRegion.filter((l) => l.bbox.x + l.bbox.w / 2 < region.x + region.w * 0.26 && l.text.split(/\s+/).length <= 4);
@@ -65,6 +83,10 @@ export function analyzeLayout(lines: OcrLine[], region: BBox): LayoutAnalysis {
   const topbar = rest.filter((l) => l.bbox.y < region.y + topH && l.bbox.x >= contentLeft - 5);
   const topSet = new Set(topbar);
   const content = rest.filter((l) => !topSet.has(l)).sort((a, b) => a.bbox.y - b.bbox.y || a.bbox.x - b.bbox.x);
+  return finish(region, sidebar, topbar, content, outside);
+}
+
+function finish(region: BBox, sidebar: OcrLine[], topbar: OcrLine[], content: OcrLine[], outside: OcrLine[]): LayoutAnalysis {
 
   // Page title: tallest text in the upper part of the content.
   const upper = content.filter((l) => l.bbox.y < region.y + region.h * 0.4 && l.source !== "control");

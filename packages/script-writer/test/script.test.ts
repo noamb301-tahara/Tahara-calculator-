@@ -58,3 +58,15 @@ describe("Hebrew script", () => {
     expect(stepTitle(tutorial.steps[0]!)).toBe("לוחצים על Settings");
   });
 });
+
+describe("toggle direction and locations", () => {
+  it("says 'turn off' when the source turns a switch off", () => {
+    const t = Tutorial.parse({ ...tutorial, steps: [step({ order: 1, instruction_he: "x", action: { type: "toggle", target_label: "Email notifications", target_type: "toggle", location_description: "", required_real_label: "Email notifications", value: "off" } })] });
+    expect(instructionFromAction(t.steps[0]!)).toBe("כבו את 'Email notifications'.");
+    expect(stepTitle(t.steps[0]!)).toBe("מכבים את Email notifications");
+  });
+  it("maps top navigation and tabs to the right Hebrew location", () => {
+    expect(hebrewLocation("top navigation bar")).toBe("בתפריט העליון");
+    expect(hebrewLocation("tabs row")).toBe("בשורת הלשוניות");
+  });
+});

@@ -57,8 +57,11 @@ export function isJunk(line: OcrLine): boolean {
 export interface AppModel {
   appName: string;
   region: BBox;
+  chrome: FramesAnalysisResult["chrome"];
   /** Sidebar nav, labels voted across frames (OCR noise-tolerant). */
   nav: NavItem[];
+  /** Horizontal navigation in the top bar (apps without a sidebar). */
+  topNav: NavItem[];
   navRight: number;
   search: string | null;
   hasAvatar: boolean;
@@ -68,15 +71,17 @@ export interface AppModel {
 export function buildAppModel(frames: FramesAnalysisResult, appName: string): AppModel {
   const region = frames.region;
   const sideLines: OcrLine[] = [];
+  const topLines: OcrLine[] = [];
   let search: string | null = null;
   let hasAvatar = false;
   let navRight = region.x;
   for (const f of frames.analyses) {
-    const L = analyzeLayout(f.ocr.lines.filter((l) => !isJunk(l)), region);
+    const L = analyzeLayout(f.ocr.lines.filter((l) => !isJunk(l)), region, frames.chrome);
     sideLines.push(...L.sidebar);
     for (const l of L.sidebar) navRight = Math.max(navRight, l.bbox.x + l.bbox.w);
     for (const l of L.topbar) {
       if (/^search/i.test(l.text)) search = cleanLabel(l.text);
+      else if (!/^[A-Z0-9]{1,2}$/.test(l.text.trim()) && l.text.split(/\s+/).length <= 3 && l.source !== "control") topLines.push(l);
       if (/^[A-Z0-9]{1,2}$/.test(l.text.trim()) && l.bbox.x > region.x + region.w * 0.7) hasAvatar = true;
     }
   }
@@ -102,14 +107,27 @@ export function buildAppModel(frames: FramesAnalysisResult, appName: string): Ap
     first = false;
     nav.push({ id: idFor("nav", label), label, icon: iconFor(label) });
   }
-  return { appName, region, nav, navRight, search, hasAvatar };
+  // Top navigation: short labels voted per horizontal slot (brand excluded).
+  const topNav: NavItem[] = [];
+  for (const lines of cluster(topLines, (l) => l.bbox.x + l.bbox.w / 2, 30).values()) {
+    if (lines.length < minVotes) continue;
+    const counts = new Map<string, number>();
+    for (const l of lines) {
+      const c = cleanLabel(l.text);
+      if (c.length >= 2) counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    const label = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (!label || labelSimilarity(label, appName) > 0.8) continue;
+    topNav.push({ id: idFor("nav", label), label, icon: iconFor(label) });
+  }
+  return { appName, region, chrome: frames.chrome, nav, topNav: topNav.length >= 2 ? topNav : [], navRight, search, hasAvatar };
 }
 
 /** Lines of the page itself (not sidebar/topbar/captions/dialogs/junk). */
 const TOAST_WORDS = /\b(sent|saved|success|successfully|enabled|disabled|created|added|updated|deleted|removed|invited|copied)\b/i;
 
 export function pageLines(frame: FrameAnalysis, app: AppModel, exclude: BBox | null): OcrLine[] {
-  const L = analyzeLayout(frame.ocr.lines.filter((l) => !isJunk(l)), app.region);
+  const L = analyzeLayout(frame.ocr.lines.filter((l) => !isJunk(l)), app.region, app.chrome);
   return L.content.filter(
     (l) =>
       l.bbox.x > app.navRight - 2 &&
@@ -169,6 +187,34 @@ export function buildPage(lines: OcrLine[]): PageModel {
 
   type Block = { y: number; el: ScreenElement };
   const blocks: Block[] = [];
+
+  // Tabs: a row of ≥3 short labels right under the title.
+  if (titleLine) {
+    const below = sorted.filter((l) => !used.has(l) && l.bbox.y > titleLine.bbox.y && l.bbox.y - (titleLine.bbox.y + titleLine.bbox.h) < 110 && l.source !== "control");
+    for (const row of cluster(below, (l) => l.bbox.y + l.bbox.h / 2, 10).values()) {
+      const short = row.filter((l) => l.text.split(/\s+/).length <= 2 && !BUTTON_WORDS.test(l.text));
+      if (short.length >= 3 && short.length === row.length) {
+        const tabs = row.sort((a, b) => a.bbox.x - b.bbox.x).map((l) => ({ id: idFor("tab", cleanLabel(l.text)), label: cleanLabel(l.text) }));
+        for (const l of row) used.add(l);
+        blocks.push({ y: row[0]!.bbox.y, el: { kind: "tabs", id: idFor("tabs", tabs.map((t) => t.label).join(" ")), tabs, active: tabs[0]!.id } });
+        break;
+      }
+    }
+  }
+
+  // Settings rows: a bold label with a muted description right under it and nothing
+  // readable to its right (the control — usually a switch — is graphical).
+  for (const l of sorted) {
+    if (used.has(l) || l.source === "control" || /\d/.test(l.text)) continue;
+    const desc = sorted.find((d) => d !== l && !used.has(d) && d.source !== "control" && d.bbox.y > l.bbox.y && d.bbox.y - (l.bbox.y + l.bbox.h) < 26 && Math.abs(d.bbox.x - l.bbox.x) < 12 && d.text.length > l.text.length);
+    if (!desc || l.text.split(/\s+/).length > 4) continue;
+    const rowRight = sorted.filter((o) => o !== l && Math.abs(o.bbox.y + o.bbox.h / 2 - (l.bbox.y + l.bbox.h / 2)) < 30 && o.bbox.x > l.bbox.x + l.bbox.w + 40 && /[a-z]{3}/i.test(o.text));
+    if (rowRight.length) continue;
+    used.add(l);
+    used.add(desc);
+    const label = cleanLabel(l.text);
+    blocks.push({ y: l.bbox.y, el: { kind: "setting_row", id: idFor("row", label), label, description: cleanLabel(desc.text), control: { kind: "toggle", id: idFor("toggle", label), label, on: true } } });
+  }
 
   // Tables: consecutive rows of ≥3 aligned cells.
   const rest = sorted.filter((l) => !used.has(l));

@@ -201,6 +201,14 @@ export const FramesAnalysisResult = z.object({
   providers: z.object({ ocr: z.string(), vision: z.string().nullable() }),
   /** App/screen area inside the video frame (excludes captions and bars). */
   region: BBox,
+  /**
+   * App chrome detected from pixel colours. null = not detected (use text heuristics);
+   * `detected` false = the region itself could not be found from the image.
+   */
+  chrome: z
+    .object({ detected: z.boolean(), sidebar: BBox.nullable(), topbar: BBox.nullable() })
+    .nullable()
+    .default(null),
 });
 export type FramesAnalysisResult = z.infer<typeof FramesAnalysisResult>;
 

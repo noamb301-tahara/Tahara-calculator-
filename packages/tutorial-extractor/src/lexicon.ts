@@ -14,7 +14,7 @@ export const UI_LABELS_HE: Record<string, string> = {
   add: "הוספה", new: "חדש", create: "יצירה", share: "שיתוף", export: "ייצוא", import: "ייבוא", upload: "העלאה", download: "הורדה",
   members: "חברים", users: "משתמשים", language: "שפה", general: "כללי", privacy: "פרטיות", integrations: "אינטגרציות", reports: "דוחות",
   analytics: "אנליטיקה", messages: "הודעות", inbox: "תיבת דואר", files: "קבצים", documents: "מסמכים", preferences: "העדפות",
-  appearance: "מראה", theme: "ערכת נושא", "two-factor authentication": "אימות דו-שלבי", "dark mode": "מצב כהה", continue: "המשך",
+  appearance: "מראה", "email notifications": "התראות במייל", "weekly summary": "סיכום שבועי", theme: "ערכת נושא", "two-factor authentication": "אימות דו-שלבי", "dark mode": "מצב כהה", continue: "המשך",
   next: "הבא", back: "חזרה", done: "סיום", submit: "שליחה", apply: "החלה", confirm: "אישור", close: "סגירה", menu: "תפריט",
   "profile picture": "תמונת הפרופיל", "new project": "פרויקט חדש", "add member": "הוספת חבר צוות", name: "שם", "full name": "שם מלא",
 };
@@ -28,7 +28,7 @@ const VERBS_HE: Record<string, string> = {
   change: "לשנות", update: "לעדכן", edit: "לערוך", create: "ליצור", make: "ליצור", delete: "למחוק", remove: "להסיר", connect: "לחבר",
   export: "לייצא", import: "לייבא", share: "לשתף", reset: "לאפס", "set up": "להגדיר", setup: "להגדיר", configure: "להגדיר", find: "למצוא",
   upload: "להעלות", download: "להוריד", schedule: "לתזמן", send: "לשלוח", rename: "לשנות שם של", move: "להעביר", archive: "להעביר לארכיון",
-  hide: "להסתיר", show: "להציג", open: "לפתוח", install: "להתקין", use: "להשתמש ב", switch: "להחליף", cancel: "לבטל",
+  hide: "להסתיר", stop: "לעצור", mute: "להשתיק", unsubscribe: "לבטל הרשמה ל", show: "להציג", open: "לפתוח", install: "להתקין", use: "להשתמש ב", switch: "להחליף", cancel: "לבטל",
 };
 
 const NOUNS_HE: Record<string, string> = {
@@ -37,6 +37,7 @@ const NOUNS_HE: Record<string, string> = {
   project: "פרויקט", file: "קובץ", folder: "תיקייה", invoice: "חשבונית", report: "דוח", page: "עמוד", language: "שפה", "dark mode": "מצב כהה",
   "profile picture": "תמונת פרופיל", photo: "תמונה", subscription: "מנוי", plan: "תוכנית", payment: "תשלום", "payment method": "אמצעי תשלום",
   meeting: "פגישה", event: "אירוע", task: "משימה", calendar: "יומן", signature: "חתימה", domain: "דומיין", website: "אתר", backup: "גיבוי",
+  "email notifications": "התראות במייל", notification: "התראות", "push notifications": "התראות פוש",
   workspace: "סביבת עבודה", channel: "ערוץ", group: "קבוצה", contact: "איש קשר", contacts: "אנשי קשר", theme: "ערכת נושא",
 };
 
