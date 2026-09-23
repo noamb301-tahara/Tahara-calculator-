@@ -21,7 +21,9 @@ export interface LayoutAnalysis {
 
 /** The app/screen area inside the video (excludes captions, black bars). */
 export function estimateScreenRegion(frameW: number, frameH: number, events: MotionEvent[], cursor: CursorSample[]): BBox {
-  const boxes = events.filter((e) => e.kind === "ui_change" && e.bbox && e.areaFraction > 0.03).map((e) => e.bbox!);
+  // Any real UI change (page switch, dialog) tells us where the app is. No hard size cut-off:
+  // a page switch can touch only ~2–3% of the pixels, and missing it drops the sidebar out of the region.
+  const boxes = events.filter((e) => e.kind === "ui_change" && e.bbox && e.areaFraction > 0.01).map((e) => e.bbox!);
   let x = Infinity;
   let y = Infinity;
   let x2 = -Infinity;

@@ -64,3 +64,16 @@ describe("OCR parsing", () => {
     expect(cleanButtonText(["|"])).toBe("");
   });
 });
+
+describe("screen region", async () => {
+  const { estimateScreenRegion } = await import("../src/layout");
+  it("keeps the sidebar when the page switch changes only ~2.5% of pixels", () => {
+    const events = [
+      { kind: "ui_change" as const, start: 5, end: 5.1, areaFraction: 0.025, bbox: { x: 35, y: 390, w: 995, h: 305 } },
+      { kind: "ui_change" as const, start: 9, end: 9.1, areaFraction: 0.43, bbox: { x: 190, y: 290, w: 870, h: 1400 } },
+    ];
+    const r = estimateScreenRegion(1080, 1920, events, []);
+    expect(r.x).toBeLessThan(40);
+    expect(r.y).toBeLessThan(300);
+  });
+});

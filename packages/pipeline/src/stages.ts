@@ -143,7 +143,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "analyze_frames",
-    version: 2,
+    version: 3,
     inputs: () => [PROJECT_FILES.media, PROJECT_FILES.transcriptJson, PROJECT_FILES.motion],
     params: (ctx) => ({ a: ctx.config.analysis, vision: ctx.llm ? ctx.config.llm.visionModel : null }),
     outputs: () => [PROJECT_FILES.framesAnalysis],
@@ -244,7 +244,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "reconstruct_screens",
-    version: 3,
+    version: 4,
     inputs: () => [PROJECT_FILES.tutorial, PROJECT_FILES.framesAnalysis],
     params: (ctx) => ({ f: ctx.project.settings.fidelityMode ?? ctx.config.fidelity.mode }),
     outputs: () => [PROJECT_FILES.screens, PROJECT_FILES.tutorial],

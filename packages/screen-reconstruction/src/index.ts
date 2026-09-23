@@ -15,7 +15,7 @@ import {
   type ScreenSet,
   type TutorialStep,
 } from "@studio/shared";
-import { DemoDataReplacer, detectSensitive, scrubDeep } from "@studio/demo-data";
+import { DemoDataReplacer, detectSensitive, isDummy, scrubDeep } from "@studio/demo-data";
 import { collectTargetIds } from "@studio/remotion-scenes/engine";
 import { BUTTON_WORDS, buildAppModel, buildPage, cleanLabel, groupIntoCards, idFor, inside, isJunk, pageLines, unionOf, type AppModel } from "./builders";
 
@@ -328,7 +328,9 @@ export function reconstructScreens(input: ReconstructInput): ReconstructResult {
   for (const sc of rendered) canonicalizeLabels(sc, canonical);
 
   // 3) Dummy data everywhere except real UI labels.
-  const protect = new Set<string>([appName, ...app.nav.map((n) => n.label), ...steps.map((s) => s.action.required_real_label)]);
+  // Only labels without personal data are protected; a "nav item" that is really a name or an amount gets replaced.
+  const protect = new Set<string>([appName, ...steps.map((s) => s.action.required_real_label)]);
+  for (const n of app.nav) if (detectSensitive(n.label).length === 0) protect.add(n.label);
   const labels = new Set<string>();
   for (const sc of rendered) collectLabels(sc, labels);
   for (const l of labels) if (detectSensitive(l).length === 0) protect.add(l);
@@ -373,7 +375,13 @@ export function reconstructScreens(input: ReconstructInput): ReconstructResult {
     for (const o of sc.overlays) if (o.kind === "dialog") o.body = o.body.map((el) => (el.kind === "input" && el.value ? { ...el, value: replacer.scrub(el.value) } : el));
   }
 
-  const tutorial = Tutorial.parse({ ...input.tutorial, fidelity_mode: input.fidelity, steps: tutorialSteps, summary: replacer.scrub(input.tutorial.summary) });
+  let tutorial = Tutorial.parse({ ...input.tutorial, fidelity_mode: input.fidelity, steps: tutorialSteps, summary: replacer.scrub(input.tutorial.summary) });
+
+  // Privacy guard (Module 22): no sensitive string seen in the source may survive into the reconstruction.
+  const guarded = guardLeaks(frames, { screens: unique, tutorial }, replacer, new Set(steps.map((s) => s.action.required_real_label)));
+  unique.splice(0, unique.length, ...guarded.value.screens);
+  tutorial = guarded.value.tutorial;
+  if (guarded.fixed) notes.push(`privacy guard replaced ${guarded.fixed} leftover sensitive string(s)`);
   const screens = ScreenSetSchema.parse({
     version: 1,
     fidelityMode: input.fidelity,
@@ -381,6 +389,34 @@ export function reconstructScreens(input: ReconstructInput): ReconstructResult {
     substitutions: replacer.substitutions.map((s) => ({ kind: s.kind, originalHash: hashString(s.original), replacement: s.replacement })),
   });
   return { screens, tutorial, notes };
+}
+
+export class PrivacyLeakError extends Error {
+  constructor(public readonly kinds: string[]) {
+    super(`Sensitive source data still present after reconstruction (${kinds.join(", ")}) — refusing to continue`);
+    this.name = "PrivacyLeakError";
+  }
+}
+
+/** Replace any leftover source PII (exact strings found during analysis); throw if something still remains. */
+export function guardLeaks<T>(frames: FramesAnalysisResult, value: T, replacer: DemoDataReplacer, allowed: Set<string>): { value: T; fixed: number } {
+  const findings = new Map<string, string>();
+  for (const f of frames.sensitive) {
+    const t = f.text.trim();
+    if (t.length >= 4 && !allowed.has(t) && !isDummy(t)) findings.set(t, f.kind);
+  }
+  let json = JSON.stringify(value);
+  let fixed = 0;
+  for (const [text, kind] of [...findings.entries()].sort((a, b) => b[0].length - a[0].length)) {
+    const needle = JSON.stringify(text).slice(1, -1);
+    if (!json.includes(needle)) continue;
+    const repl = JSON.stringify(replacer.replaceFinding(kind as Parameters<DemoDataReplacer["replaceFinding"]>[0], text)).slice(1, -1);
+    json = json.split(needle).join(repl);
+    fixed++;
+  }
+  const left = [...findings.entries()].filter(([t]) => json.includes(JSON.stringify(t).slice(1, -1)));
+  if (left.length) throw new PrivacyLeakError([...new Set(left.map(([, k]) => k))]);
+  return { value: JSON.parse(json) as T, fixed };
 }
 
 function canonicalizeLabels(sc: ScreenDefinition, labels: string[]) {
