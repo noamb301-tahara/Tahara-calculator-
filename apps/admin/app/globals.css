@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+body {
+  font-family: "Heebo", "Inter", system-ui, sans-serif;
+  background: #f5f6fa;
+  color: #141a36;
+}
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
