@@ -128,6 +128,12 @@ export const StudioConfigSchema = z.object({
       concurrency: z.number().int().nullable().default(null),
     })
     .default({ browserExecutable: null, concurrency: null }),
+  privacy: z
+    .object({
+      /** OCR the rendered video and fail if any source-sensitive string is visible. */
+      verifyRender: z.boolean().default(true),
+    })
+    .default({ verifyRender: true }),
   paths: z.object({ data: z.string().default("data"), output: z.string().default("output") }).default({ data: "data", output: "output" }),
 });
 export type StudioConfig = z.infer<typeof StudioConfigSchema>;

@@ -1,4 +1,4 @@
-import { copyFile, readFile } from "node:fs/promises";
+import { copyFile, readFile, rename } from "node:fs/promises";
 import { cpus } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -24,7 +24,7 @@ import {
 import { ensureDir, exists, readJson, readJsonAs, sha256File, writeFileAtomic, writeJson, type Logger } from "@studio/shared/node";
 import { ingestVideo } from "@studio/video-ingestion";
 import { transcribe, transcriptToText } from "@studio/transcription";
-import { analyzeFrames } from "@studio/frame-analysis";
+import { analyzeFrames, findTextInVideo } from "@studio/frame-analysis";
 import { detectActions, extractTutorial } from "@studio/tutorial-extractor";
 import { reconstructScreens } from "@studio/screen-reconstruction";
 import { scriptToText, writeScript } from "@studio/script-writer";
@@ -33,7 +33,7 @@ import { buildSubtitles, toSrt } from "@studio/subtitles";
 import { buildRenderPlan, computeTimeline, type Timeline } from "@studio/remotion-scenes/plan";
 import { generateGuide } from "@studio/guide-generator";
 import { generateSeo } from "@studio/seo-engine";
-import { redact } from "@studio/demo-data";
+import { isDummy, redact } from "@studio/demo-data";
 import { claudeVision, createLlm, hebrewDraft, refineTutorial, writeScriptWithLlm, type ClaudeClient } from "@studio/llm";
 
 /** Everything a stage needs. */
@@ -399,9 +399,9 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "render",
-    version: 1,
+    version: 2,
     inputs: () => [PROJECT_FILES.renderPlan, PROJECT_FILES.voiceTrack],
-    params: (ctx) => ({ v: ctx.config.video, r: ctx.config.render.concurrency }),
+    params: (ctx) => ({ v: ctx.config.video, r: ctx.config.render.concurrency, pv: ctx.config.privacy.verifyRender }),
     outputs: (ctx) => [relOut(ctx, FINAL_VIDEO_NAME)],
     async run(ctx) {
       const plan = await readJsonAs(p(ctx, PROJECT_FILES.renderPlan), RenderPlan);
@@ -445,9 +445,26 @@ export const STAGES: StageDef[] = [
         finishedAt: new Date().toISOString(),
         error: null,
       });
+      // Privacy check on the pixels the viewer will see (Module 22).
+      const notes: string[] = [];
+      if (ctx.config.privacy.verifyRender && (await exists(p(ctx, PROJECT_FILES.framesAnalysis)))) {
+        const frames = await readJsonAs(p(ctx, PROJECT_FILES.framesAnalysis), FramesAnalysisResult);
+        const tutorial = await loadTutorial(ctx);
+        const allowed = new Set(tutorial.steps.map((s) => s.action.required_real_label.toLowerCase()));
+        const needles = [...new Set(frames.sensitive.map((f) => f.text.trim()))].filter((t) => !isDummy(t) && !allowed.has(t.toLowerCase()));
+        const hits = await findTextInVideo(out, needles);
+        if (hits.length) {
+          const rejected = out.replace(/\.mp4$/, ".REJECTED.mp4");
+          await rename(out, rejected);
+          const kinds = [...new Set(hits.map((h) => frames.sensitive.find((f) => f.text.trim() === h.needle)?.kind ?? "sensitive"))];
+          ctx.log.error(`privacy check failed: ${hits.length} hit(s) of source ${kinds.join("/")} at ${[...new Set(hits.map((h) => h.time))].slice(0, 8).join(", ")}s`);
+          throw new Error(`Rendered video shows source personal data (${kinds.join(", ")}) — moved to ${rejected}`);
+        }
+        notes.push(`privacy check: OCR of rendered frames found none of ${needles.length} source-sensitive strings`);
+      }
       // Deliverable bundle next to the video.
       const copied = await copyDeliverables(ctx);
-      return { outputs: [relOut(ctx, FINAL_VIDEO_NAME)], provider: "remotion", notes: [`output: ${out}`, `deliverables: ${copied.join(", ")}`] };
+      return { outputs: [relOut(ctx, FINAL_VIDEO_NAME)], provider: "remotion", notes: [`output: ${out}`, `deliverables: ${copied.join(", ")}`, ...notes] };
     },
   },
 ];
