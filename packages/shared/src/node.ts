@@ -6,3 +6,4 @@ export * from "./node/load-config";
 export * from "./node/store";
 export * from "./node/exec";
 export * from "./node/retry";
+export * from "./node/media";

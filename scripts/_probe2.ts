@@ -1,0 +1,15 @@
+import { readJson } from "@studio/shared/node";
+import { detectActions } from "../packages/tutorial-extractor/src/actions";
+import { parseCues } from "../packages/tutorial-extractor/src/cues";
+import { transcribe } from "@studio/transcription";
+import { loadConfig } from "@studio/shared/node";
+const { config } = await loadConfig();
+const fa: any = await readJson("/tmp/claude-0/proj/fa.json");
+const tr = await transcribe({ audioFile: null, sourcePath: "input/short-demo.mp4", config });
+console.log(parseCues(tr.segments).map(c => [c.action, c.targets[0], c.location, c.value, c.container, c.time.toFixed(2)]));
+for (const a of detectActions({ transcript: tr, frames: fa, minConfidence: 0.4 })) console.log(a.timestamp, a.action, JSON.stringify(a.target), a.value, a.confidence, a.point && [Math.round(a.point.x), Math.round(a.point.y)], a.signals.map(s=>s.signal).join(","));
+import { extractTutorial } from "../packages/tutorial-extractor/src/extract";
+const acts = detectActions({ transcript: tr, frames: fa, minConfidence: 0.4 });
+const tut = extractTutorial({ transcript: tr, frames: fa, actions: acts, media: { durationSec: 28.6 } as any, config });
+console.log(tut.title, "|", tut.title_he, "|", tut.app.name);
+for (const s of tut.steps) console.log(s.id, s.action.type, s.action.target_type, JSON.stringify(s.action.required_real_label), s.action.location_description, "|", s.instruction_he, "|", s.what_user_sees_after, "|", s.review.status, s.confidence);

@@ -22,14 +22,21 @@
     "admin:build": "pnpm --filter @studio/admin build"
   },
   "devDependencies": {
+    "@studio/demo-data": "workspace:*",
+    "@studio/frame-analysis": "workspace:*",
+    "@studio/remotion-scenes": "workspace:*",
+    "@studio/renderer": "workspace:*",
+    "@studio/script-writer": "workspace:*",
+    "@studio/shared": "workspace:*",
+    "@studio/subtitles": "workspace:*",
+    "@studio/transcription": "workspace:*",
+    "@studio/tutorial-extractor": "workspace:*",
+    "@studio/video-ingestion": "workspace:*",
+    "@studio/voice": "workspace:*",
     "@types/node": "^22.10.0",
+    "playwright-core": "^1.56.0",
     "tsx": "^4.20.0",
     "typescript": "5.9.3",
-    "vitest": "^4.1.0",
-    "@studio/shared": "workspace:*",
-    "@studio/script-writer": "workspace:*",
-    "@studio/subtitles": "workspace:*",
-    "@studio/remotion-scenes": "workspace:*",
-    "@studio/renderer": "workspace:*"
+    "vitest": "^4.1.0"
   }
 }

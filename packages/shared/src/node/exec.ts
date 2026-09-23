@@ -20,10 +20,10 @@ export class ExecError extends Error {
 export function run(
   cmd: string,
   args: string[],
-  opts: { cwd?: string; input?: string | Buffer; allowFailure?: boolean; maxBuffer?: number; binaryStdout?: boolean } = {},
+  opts: { cwd?: string; input?: string | Buffer; allowFailure?: boolean; maxBuffer?: number; binaryStdout?: boolean; env?: Record<string, string> } = {},
 ): Promise<ExecResult & { stdoutBuffer: Buffer }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd: opts.cwd, stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(cmd, args, { cwd: opts.cwd, stdio: ["pipe", "pipe", "pipe"], env: opts.env ? { ...process.env, ...opts.env } : process.env });
     const out: Buffer[] = [];
     const err: Buffer[] = [];
     let size = 0;

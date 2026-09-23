@@ -8,6 +8,12 @@ importers:
 
   .:
     devDependencies:
+      '@studio/demo-data':
+        specifier: workspace:*
+        version: link:packages/demo-data
+      '@studio/frame-analysis':
+        specifier: workspace:*
+        version: link:packages/frame-analysis
       '@studio/remotion-scenes':
         specifier: workspace:*
         version: link:packages/remotion-scenes
@@ -23,9 +29,24 @@ importers:
       '@studio/subtitles':
         specifier: workspace:*
         version: link:packages/subtitles
+      '@studio/transcription':
+        specifier: workspace:*
+        version: link:packages/transcription
+      '@studio/tutorial-extractor':
+        specifier: workspace:*
+        version: link:packages/tutorial-extractor
+      '@studio/video-ingestion':
+        specifier: workspace:*
+        version: link:packages/video-ingestion
+      '@studio/voice':
+        specifier: workspace:*
+        version: link:packages/voice
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.4
+      playwright-core:
+        specifier: ^1.56.0
+        version: 1.63.0
       tsx:
         specifier: ^4.20.0
         version: 4.23.15
@@ -69,6 +90,21 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.3.0(@types/react@19.3.0)
+
+  packages/demo-data:
+    dependencies:
+      '@studio/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/frame-analysis:
+    dependencies:
+      '@studio/demo-data':
+        specifier: workspace:*
+        version: link:../demo-data
+      '@studio/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/remotion-scenes:
     dependencies:
@@ -114,6 +150,36 @@ importers:
         version: 4.6.5
 
   packages/subtitles:
+    dependencies:
+      '@studio/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/transcription:
+    dependencies:
+      '@studio/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/tutorial-extractor:
+    dependencies:
+      '@studio/frame-analysis':
+        specifier: workspace:*
+        version: link:../frame-analysis
+      '@studio/script-writer':
+        specifier: workspace:*
+        version: link:../script-writer
+      '@studio/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/video-ingestion:
+    dependencies:
+      '@studio/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/voice:
     dependencies:
       '@studio/shared':
         specifier: workspace:*
@@ -1592,6 +1658,11 @@ packages:
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
+
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   postcss-modules-extract-imports@3.1.0:
     resolution: {integrity: sha512-k3kNe0aNFQDAZGbin48pL2VNidTF0w4/eASDsxlyspobzU3wZQLOGj7L9gfRe0Jo9/4uud09DsjFNH7winGv8Q==}
@@ -3412,6 +3483,8 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.63.0: {}
 
   postcss-modules-extract-imports@3.1.0(postcss@8.5.28):
     dependencies:

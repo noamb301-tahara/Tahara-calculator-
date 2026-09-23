@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<!-- Synthetic "source" screen recording used to test the analysis pipeline.
+     Deliberately contains realistic-looking fake PII that the pipeline must replace. -->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1080px; height: 1920px; background: #000; font-family: "DejaVu Sans", Arial, sans-serif; overflow: hidden; }
+  #caption { position: absolute; top: 0; left: 0; right: 0; height: 250px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 58px; font-weight: 700; text-align: center; padding: 0 40px; }
+  #handle { position: absolute; bottom: 60px; left: 0; right: 0; text-align: center; color: #bbb; font-size: 34px; }
+  #screen { position: absolute; top: 290px; left: 20px; width: 1040px; height: 1400px; background: #fff; border-radius: 14px; overflow: hidden; display: flex; }
+  #sidebar { width: 250px; background: #1e293b; color: #cbd5e1; padding: 24px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .logo { color: #fff; font-size: 30px; font-weight: 700; padding: 6px 12px 26px; }
+  .nav { padding: 14px 14px; border-radius: 8px; font-size: 25px; }
+  .nav.active { background: #334155; color: #fff; }
+  #main { flex: 1; display: flex; flex-direction: column; }
+  #topbar { height: 80px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; padding: 0 24px; gap: 16px; }
+  .search { flex: 1; height: 46px; border-radius: 8px; background: #f1f5f9; color: #94a3b8; font-size: 22px; display: flex; align-items: center; padding: 0 16px; }
+  .avatar { width: 48px; height: 48px; border-radius: 50%; background: #f97316; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .page { padding: 30px; display: none; flex-direction: column; gap: 24px; }
+  .page.show { display: flex; }
+  h1 { margin: 0; font-size: 40px; color: #0f172a; }
+  .row { display: flex; gap: 18px; }
+  .stat { flex: 1; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; }
+  .stat .l { color: #64748b; font-size: 21px; } .stat .v { font-size: 38px; font-weight: 700; color: #0f172a; margin-top: 6px; }
+  .head { display: flex; align-items: center; justify-content: space-between; }
+  .btn { display: inline-flex; align-items: center; padding: 14px 22px; border-radius: 8px; font-size: 23px; font-weight: 600; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; }
+  .btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+  table { width: 100%; border-collapse: collapse; font-size: 21px; }
+  th { text-align: left; color: #64748b; font-weight: 600; padding: 14px 10px; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 18px 10px; border-bottom: 1px solid #f1f5f9; color: #0f172a; }
+  #overlay { position: absolute; inset: 0; background: rgba(15,23,42,.45); display: none; align-items: center; justify-content: center; }
+  #dialog { width: 700px; background: #fff; border-radius: 14px; padding: 34px; display: flex; flex-direction: column; gap: 22px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+  #dialog h2 { margin: 0; font-size: 34px; }
+  label { font-size: 22px; font-weight: 600; color: #334155; display: block; margin-bottom: 8px; }
+  .input { height: 58px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 23px; display: flex; align-items: center; padding: 0 16px; color: #0f172a; position: relative; }
+  .input.focus { border-color: #2563eb; box-shadow: 0 0 0 3px #bfdbfe; }
+  .ph { color: #94a3b8; }
+  #roleList { position: absolute; top: 64px; left: 0; right: 0; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.15); display: none; z-index: 5; }
+  .opt { padding: 16px; font-size: 23px; } .opt.hover { background: #eff6ff; }
+  .actions { display: flex; justify-content: flex-end; gap: 12px; }
+  #toast { position: absolute; bottom: 30px; right: 30px; background: #0f172a; color: #fff; padding: 20px 26px; border-radius: 10px; font-size: 22px; display: none; }
+  #cursor { position: absolute; width: 44px; height: 44px; z-index: 100; pointer-events: none; transform-origin: 4px 3px; }
+</style>
+</head>
+<body>
+<div id="caption">How to invite a teammate</div>
+<div id="screen">
+  <div id="sidebar">
+    <div class="logo">Taskly</div>
+    <div class="nav" id="nav-dashboard">Dashboard</div>
+    <div class="nav" id="nav-projects">Projects</div>
+    <div class="nav" id="nav-team">Team</div>
+    <div class="nav" id="nav-calendar">Calendar</div>
+    <div class="nav" id="nav-settings">Settings</div>
+  </div>
+  <div id="main">
+    <div id="topbar"><div class="search">Search tasks...</div><div class="avatar">JS</div></div>
+    <div class="page" id="page-dashboard">
+      <h1>Welcome back, John</h1>
+      <div class="row">
+        <div class="stat"><div class="l">Revenue</div><div class="v">$17,428</div></div>
+        <div class="stat"><div class="l">Open tasks</div><div class="v">42</div></div>
+      </div>
+      <div class="stat"><div class="l">Account ID</div><div class="v" style="font-size:26px">ACC-4481-2290-7713</div></div>
+      <table><tr><th>Project</th><th>Owner</th></tr>
+        <tr><td>Website redesign</td><td>Michael Johnson</td></tr>
+        <tr><td>ABC Marketing launch</td><td>Maria Garcia</td></tr></table>
+    </div>
+    <div class="page" id="page-team">
+      <div class="head"><h1>Team</h1><div class="btn primary" id="btn-invite">Invite member</div></div>
+      <table id="team-table"><tr><th>Name</th><th>Email</th><th>Role</th></tr>
+        <tr><td>John Smith</td><td>john.smith@acme.com</td><td>Admin</td></tr>
+        <tr><td>Maria Garcia</td><td>maria.g@acme.com</td><td>Editor</td></tr>
+        <tr><td>Kevin Lee</td><td>kevin.lee@acme.com</td><td>Viewer</td></tr>
+        <tr id="new-row" style="display:none"><td>Sarah Connor</td><td>sarah.connor@acme-corp.com</td><td>Editor</td></tr></table>
+      <div style="color:#64748b;font-size:21px">Support: +1 (415) 555-0132</div>
+    </div>
+  </div>
+  <div id="overlay"><div id="dialog">
+    <h2>Invite a teammate</h2>
+    <div><label>Email address</label><div class="input" id="in-email"><span class="ph">name@company.com</span></div></div>
+    <div><label>Role</label><div class="input" id="in-role"><span id="role-val">Viewer</span><span style="margin-left:auto;color:#64748b">▾</span>
+      <div id="roleList"><div class="opt" id="opt-viewer">Viewer</div><div class="opt" id="opt-editor">Editor</div><div class="opt" id="opt-admin">Admin</div></div></div></div>
+    <div class="actions"><div class="btn" id="btn-cancel">Cancel</div><div class="btn primary" id="btn-send">Send invite</div></div>
+  </div></div>
+  <div id="toast">Invitation sent to sarah.connor@acme-corp.com</div>
+</div>
+<div id="handle">@quicktechtips</div>
+<svg id="cursor" viewBox="0 0 32 32"><path d="M5 3 L5 25 L11 19.5 L15 28.5 L19 26.8 L15.2 18 L23 18 Z" fill="#000" stroke="#fff" stroke-width="2"/></svg>
+<script>
+  // Deterministic scene: window.renderAt(t) applies the state for time t.
+  let EVENTS = [];
+  const $ = (id) => document.getElementById(id);
+  const centerOf = (id) => { const r = $(id).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  window.setEvents = (e) => { EVENTS = e; };
+  const ease = (p) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2);
+  window.renderAt = (t) => {
+    const s = { page: "dashboard", dialog: false, email: "", focus: null, roleOpen: false, role: "Viewer", hover: null, toast: false, newRow: false };
+    for (const e of EVENTS) {
+      if (e.t > t) continue;
+      if (e.type === "set") Object.assign(s, e.state);
+      if (e.type === "type") { const n = Math.round(e.text.length * Math.min(1, (t - e.t) / e.dur)); s.email = e.text.slice(0, n); }
+    }
+    for (const p of ["dashboard", "team"]) $("page-" + p).classList.toggle("show", s.page === p);
+    $("nav-dashboard").classList.toggle("active", s.page === "dashboard");
+    $("nav-team").classList.toggle("active", s.page === "team");
+    $("overlay").style.display = s.dialog ? "flex" : "none";
+    $("in-email").innerHTML = s.email ? s.email : '<span class="ph">name@company.com</span>';
+    $("in-email").classList.toggle("focus", s.focus === "email");
+    $("roleList").style.display = s.roleOpen ? "block" : "none";
+    $("role-val").textContent = s.role;
+    for (const o of ["viewer", "editor", "admin"]) $("opt-" + o).classList.toggle("hover", s.hover === o);
+    $("toast").style.display = s.toast ? "block" : "none";
+    $("new-row").style.display = s.newRow ? "table-row" : "none";
+    // Cursor: interpolate between move targets (measured after state is applied).
+    let pos = { x: 860, y: 1500 };
+    let press = 0;
+    for (const e of EVENTS) {
+      if (e.t > t) break;
+      if (e.type === "move") {
+        const to = centerOf(e.to);
+        const p = Math.min(1, (t - e.t) / e.dur);
+        const from = e.from || pos;
+        pos = { x: from.x + (to.x - from.x) * ease(p), y: from.y + (to.y - from.y) * ease(p) };
+        e.from = e.from || from;
+      }
+      if (e.type === "click" && t - e.t < 0.2) press = 1;
+    }
+    const c = $("cursor");
+    c.style.left = pos.x - 4 + "px";
+    c.style.top = pos.y - 3 + "px";
+    c.style.transform = press ? "scale(0.85)" : "none";
+  };
+</script>
+</body>
+</html>

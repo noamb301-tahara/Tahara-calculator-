@@ -93,6 +93,8 @@ export const OcrLine = z.object({
   text: z.string(),
   confidence: z.number(),
   bbox: BBox,
+  /** "control" = text read from inside a filled button/badge (second OCR pass). */
+  source: z.enum(["text", "control"]).optional(),
 });
 export type OcrLine = z.infer<typeof OcrLine>;
 
@@ -197,6 +199,8 @@ export const FramesAnalysisResult = z.object({
   cursorTrack: z.array(CursorSample),
   sensitive: z.array(SensitiveFinding),
   providers: z.object({ ocr: z.string(), vision: z.string().nullable() }),
+  /** App/screen area inside the video frame (excludes captions and bars). */
+  region: BBox,
 });
 export type FramesAnalysisResult = z.infer<typeof FramesAnalysisResult>;
 

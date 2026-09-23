@@ -1,0 +1,16 @@
+import { resolve, join } from "node:path";
+import { loadConfig, writeJson } from "@studio/shared/node";
+import { ingestVideo } from "@studio/video-ingestion";
+import { transcribe } from "@studio/transcription";
+import { analyzeFrames } from "@studio/frame-analysis";
+const { config, root } = await loadConfig({ root: "/home/user/Tahara-calculator-" });
+const src = resolve(root, "input/short-demo.mp4");
+const dir = "/tmp/claude-0/proj";
+const ingest = await ingestVideo(src, dir, config);
+console.log("media", ingest.media, "scenes", ingest.scenes.length, ingest.motion);
+const tr = await transcribe({ audioFile: join(dir, ingest.audioFile!), sourcePath: src, config });
+console.log("transcript", tr.provider, tr.language, tr.segments.length);
+const fa = await analyzeFrames({ projectDir: dir, sourceFile: src, ingest, transcript: tr, config, log: console.log });
+await writeJson(join(dir, "fa.json"), fa);
+console.log("frames", fa.frames.length, "region", fa.region, "events", fa.motionEvents.filter(e=>e.kind==="ui_change").map(e=>[e.start,e.areaFraction]), "stops", fa.motionEvents.filter(e=>e.kind==="cursor_stop").map(e=>[e.start,Math.round(e.point!.x),Math.round(e.point!.y)]));
+console.log("sensitive", [...new Set(fa.sensitive.map(s=>s.kind+":"+s.text))]);
