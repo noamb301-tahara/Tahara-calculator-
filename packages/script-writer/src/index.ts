@@ -24,12 +24,26 @@ export function generateHooks(tutorial: Tutorial): Hook[] {
   ];
 }
 
+/** Generic "after" phrases that add nothing when spoken. */
+const SILENT_AFTER = /^(הטקסט מופיע בשדה|השדה מתמלא|האפשרות נבחרת|'.+' מופיע כאפשרות שנבחרה|המסך מתעדכן בהתאם)$/;
+
+/** Speakable version of the "after" line: long English UI text stays on screen only. */
+export function spokenAfter(after: string): string | null {
+  const a = after.trim().replace(/[.!?]*$/, "");
+  if (!a || !isHebrew(a) || SILENT_AFTER.test(a)) return null;
+  const quoted = /^(.*?)[:\s]*'([^']+)'$/.exec(a);
+  if (quoted && quoted[2]!.length > 22) return quoted[1]!.replace(/[:\s]+$/, "").trim() || null;
+  return a;
+}
+
 /** The narration for a step: the instruction plus what appears afterwards. */
 export function stepNarration(step: TutorialStep): string {
   let text = step.instruction_he?.trim() || instructionFromAction(step);
+  // Emails typed in the demo are shown, never read out.
+  text = text.replace(/'[^'\s]+@[^'\s]+'/g, "את כתובת האימייל");
   if (!/[.!?]$/.test(text)) text += ".";
-  const after = step.what_user_sees_after?.trim();
-  if (after && isHebrew(after) && !text.includes(after)) text += ` ${after.replace(/[.!?]*$/, "")}.`;
+  const after = spokenAfter(step.what_user_sees_after ?? "");
+  if (after && !text.includes(after)) text += ` ${after}.`;
   if (step.warning && isHebrew(step.warning)) text += ` שימו לב: ${step.warning.replace(/[.!?]*$/, "")}.`;
   return text;
 }
@@ -50,8 +64,14 @@ export function writeScript(tutorial: Tutorial, opts: ScriptOptions): Script {
   push({ id: "hook", kind: "hook", stepId: null, text: selected.text, onScreenTitle: null });
   const steps = [...tutorial.steps].sort((a, b) => a.order - b.order);
   const checks = [];
+  let inDialog = false;
   for (const step of steps) {
-    const text = stepNarration(step);
+    let text = stepNarration(step);
+    // Say "in the dialog that opened" once, not on every step inside it.
+    if (text.includes(" בחלון שנפתח")) {
+      if (inDialog) text = text.replace(" בחלון שנפתח", "");
+      inDialog = true;
+    } else inDialog = false;
     push({ id: step.id, kind: "step", stepId: step.id, text, onScreenTitle: stepTitle(step) });
     checks.push(checkStep(step, text));
   }

@@ -25,6 +25,9 @@ const PATTERNS: { kind: SensitiveKind; re: RegExp }[] = [
   { kind: "address", re: /\b\d{1,5}\s+(?:[A-Z][a-z]+\s){1,3}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Lane|Ln|Dr|Drive)\b\.?/g },
 ];
 
+const BUSINESS_IN_TEXT = /\b(?:[A-Z][\w&'.-]*\s+){1,3}(?:Inc|LLC|Ltd|Corp|GmbH|Group|Agency|Marketing|Studio|Studios|Labs|Media|Solutions|Consulting|Partners|Holdings|Industries|Technologies)\b\.?/g;
+const GREETING = /\b(?:Welcome back|Welcome|Hi|Hello|Hey|Good morning|Good afternoon|Good evening),?\s+([A-Z][a-z]{1,15})\b/g;
+
 const PASSWORD_CONTEXT = /(password|passcode|secret|api key|token|סיסמה)\s*[:=]\s*(\S+)/gi;
 
 /** Common UI vocabulary: two capitalized words made of these are UI, not a person. */
@@ -76,6 +79,8 @@ export function detectSensitive(text: string, opts: { protectedLabels?: Set<stri
     }
   }
   for (const m of text.matchAll(PASSWORD_CONTEXT)) findings.push({ kind: "password", text: m[2]!, frameId: opts.frameId });
+  for (const m of text.matchAll(BUSINESS_IN_TEXT)) if (!opts.protectedLabels?.has(m[0].toLowerCase())) findings.push({ kind: "person_name", text: m[0].trim(), frameId: opts.frameId });
+  for (const m of text.matchAll(GREETING)) if (!UI_WORDS.has(m[1]!.toLowerCase())) findings.push({ kind: "person_name", text: m[1]!, frameId: opts.frameId });
   // Person names: check whole text and comma/pipe separated parts.
   for (const part of text.split(/\s*[,|•·]\s*|\s{2,}/)) {
     if (looksLikePersonName(part, opts.protectedLabels)) findings.push({ kind: "person_name", text: part.trim(), frameId: opts.frameId });
@@ -127,7 +132,7 @@ export function perturbNumber(num: string, seed: number): string {
   let first = true;
   const out = num.replace(/\d/g, (d) => {
     s = (Math.imul(s, 1103515245) + 12345) >>> 0;
-    let nd = (s >> 8) % 10;
+    let nd = (s >>> 8) % 10;
     if (first) {
       nd = ((Number(d) + 1 + (nd % 7)) % 9) + 1; // non-zero, different leading digit
       first = false;
@@ -175,10 +180,16 @@ export class DemoDataReplacer {
   }
 
   personName(original: string): string {
+    if (!/\s/.test(original.trim())) {
+      // A lone first name ("Welcome back, John"): keep it consistent with a full name if we saw one.
+      const full = [...this.map.values()].find((s) => s.kind === "person_name" && s.original.split(/\s+/)[0] === original.trim());
+      if (full) return full.replacement.split(" ")[0]!;
+      return this.remember("first_name", original, () => FIRST[(seeded(this.salt + original) + this.nameIndex++) % FIRST.length]!);
+    }
     return this.remember("person_name", original, () => {
       const seed = seeded(this.salt + original);
       const i = (seed + this.nameIndex++) % FIRST.length;
-      const j = (seed >> 5) % LAST.length;
+      const j = (seed >>> 5) % LAST.length;
       return `${FIRST[i]} ${LAST[j]}`;
     });
   }
@@ -236,12 +247,14 @@ export class DemoDataReplacer {
     }
   }
 
-  /** Replace every sensitive span in a text. Protected labels are left untouched. */
+  /** Replace every sensitive span in a text. Protected labels are left untouched. Idempotent on dummy data. */
   scrub(text: string): string {
     if (!text || this.isProtected(text)) return text;
     let out = text;
     // Longest first so names inside emails are handled by the email rule.
-    const findings = detectSensitive(text, { protectedLabels: this.protectedLabels }).sort((a, b) => b.text.length - a.text.length);
+    const findings = detectSensitive(text, { protectedLabels: this.protectedLabels })
+      .filter((f) => !isDummy(f.text))
+      .sort((a, b) => b.text.length - a.text.length);
     for (const f of findings) {
       if (!out.includes(f.text)) continue;
       out = out.split(f.text).join(this.replaceFinding(f.kind, f.text));
@@ -254,6 +267,21 @@ export class DemoDataReplacer {
     if (this.isProtected(text)) return text;
     return text.replace(/\d[\d,.]*/g, (n) => this.remember("number", n, () => perturbNumber(n, seeded(this.salt + n))));
   }
+}
+
+const FIRST_SET = new Set(FIRST);
+const LAST_SET = new Set(LAST);
+const BUSINESS_SET = new Set(BUSINESSES);
+
+/** True for values this module generates, so re-scrubbing never re-replaces them. */
+export function isDummy(text: string): boolean {
+  const t = text.trim();
+  if (/@example\.com$/i.test(t) || /^https:\/\/example\.com/.test(t) || /^\(555\) 01\d-\d{4}$/.test(t) || t.includes("•••")) return true;
+  if (BUSINESS_SET.has(t)) return true;
+  const parts = t.split(/\s+/);
+  if (parts.length === 1) return FIRST_SET.has(t);
+  if (parts.length === 2) return FIRST_SET.has(parts[0]!) && LAST_SET.has(parts[1]!);
+  return false;
 }
 
 function cap(s: string): string {
@@ -269,4 +297,11 @@ export function scrubDeep<T>(value: T, replacer: DemoDataReplacer, skipKeys: Set
     return v;
   };
   return walk(value, null) as T;
+}
+
+/** Redact (not replace) sensitive spans: for analysis files that describe the source. */
+export function redact(text: string): string {
+  let out = text;
+  for (const f of detectSensitive(text).sort((a, b) => b.text.length - a.text.length)) out = out.split(f.text).join(`[${f.kind}]`);
+  return out;
 }

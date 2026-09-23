@@ -85,7 +85,7 @@ function afterDescription(a: DetectedAction, before: FrameAnalysis | null, after
   if (a.action === "toggle") return { he: "המתג משנה את מצבו", kind: "state", title: null };
   const fresh = newLines(before, after).filter((l) => l.text.length > 2);
   const toast = fresh.find((l) => TOAST_WORDS.test(l.text));
-  if (toast) return { he: `מופיעה הודעה: '${toast.text}'`, kind: "toast", title: toast.text };
+  if (toast) return { he: `מופיעה הודעת אישור: '${toast.text}'`, kind: "toast", title: toast.text };
   const beforeTitle = before?.pageTitle ?? null;
   const afterTitle = after?.pageTitle ?? null;
   // A new large line near the vertical middle = dialog title; a changed page title = navigation.

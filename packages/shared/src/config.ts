@@ -48,7 +48,7 @@ export const StudioConfigSchema = z.object({
           outputFormat: z.string().default("mp3_44100_128"),
         })
         .default({ voiceId: null, modelId: "eleven_v3", languageCode: "he", stability: 0.5, similarityBoost: 0.75, style: 0.2, speed: 1, outputFormat: "mp3_44100_128" }),
-      espeak: z.object({ voice: z.string().default("he"), wpm: z.number().default(150) }).default({ voice: "he", wpm: 150 }),
+      espeak: z.object({ voice: z.string().default("he"), wpm: z.number().default(175) }).default({ voice: "he", wpm: 150 }),
       retries: z.number().int().default(3),
       timeoutMs: z.number().int().default(60_000),
       gapSec: z.number().default(0.35),
@@ -56,7 +56,7 @@ export const StudioConfigSchema = z.object({
     .default({
       provider: "auto",
       elevenlabs: { voiceId: null, modelId: "eleven_v3", languageCode: "he", stability: 0.5, similarityBoost: 0.75, style: 0.2, speed: 1, outputFormat: "mp3_44100_128" },
-      espeak: { voice: "he", wpm: 150 },
+      espeak: { voice: "he", wpm: 175 },
       retries: 3,
       timeoutMs: 60_000,
       gapSec: 0.35,
@@ -74,12 +74,12 @@ export const StudioConfigSchema = z.object({
     .object({
       /** "auto" = anthropic if ANTHROPIC_API_KEY is set, else deterministic heuristics. */
       provider: z.enum(["auto", "anthropic", "none"]).default("auto"),
-      model: z.string().default("claude-opus-5-5"),
-      visionModel: z.string().default("claude-opus-5-5"),
+      model: z.string().default("claude-opus-5"),
+      visionModel: z.string().default("claude-opus-5"),
       maxTokens: z.number().int().default(16000),
       maxVisionFrames: z.number().int().default(12),
     })
-    .default({ provider: "auto", model: "claude-opus-5-5", visionModel: "claude-opus-5-5", maxTokens: 16000, maxVisionFrames: 12 }),
+    .default({ provider: "auto", model: "claude-opus-5", visionModel: "claude-opus-5", maxTokens: 16000, maxVisionFrames: 12 }),
   analysis: z
     .object({
       sceneThreshold: z.number().min(0).max(1).default(0.25),

@@ -116,7 +116,7 @@ export function analyzeMotion(s: MotionStream, scale: number): MotionAnalysis {
   const frameArea = s.width * s.height;
   // A cursor blob covers roughly 0.02%–0.6% of the frame at analysis resolution.
   const maxCursorArea = Math.max(12, frameArea * 0.006);
-  const isCursorLike = (c: Component) => c.area <= maxCursorArea && c.maxX - c.minX < s.width * 0.08 && c.maxY - c.minY < s.height * 0.06;
+  const isCursorLike = (c: Component) => c.area <= maxCursorArea && c.maxX - c.minX < Math.max(8, s.width * 0.1) && c.maxY - c.minY < Math.max(8, s.height * 0.07);
 
   const cursor: CursorSample[] = [];
   let last: { x: number; y: number } | null = null;

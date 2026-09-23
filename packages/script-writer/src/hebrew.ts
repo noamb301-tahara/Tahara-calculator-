@@ -51,8 +51,13 @@ export function instructionFromAction(step: TutorialStep): string {
     case "toggle":
     case "check":
       return `הפעילו את ${label}${w}.`;
-    case "type":
-      return step.action.value ? `הקלידו '${step.action.value}' בשדה ${label}${w}.` : `מלאו את השדה ${label}${w}.`;
+    case "type": {
+      // Emails / long values are shown on screen, not read aloud.
+      const v = step.action.value;
+      if (v && v.length <= 18 && !v.includes("@")) return `הקלידו '${v}' בשדה ${label}${w}.`;
+      if (v && v.includes("@")) return `הקלידו את כתובת האימייל בשדה ${label}${w}.`;
+      return `מלאו את השדה ${label}${w}.`;
+    }
     case "select":
       return step.action.value ? `בחרו '${step.action.value}' ברשימה ${label}${w}.` : `בחרו אפשרות ברשימה ${label}${w}.`;
     case "scroll":

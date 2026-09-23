@@ -28,6 +28,7 @@ export const PROJECT_FILES = {
   voiceDir: "voice",
   voiceTrack: "voice/voice.mp3",
   voiceMeta: "voice/voice.json",
+  timeline: "timeline.json",
   subtitlesSrt: "subtitles.srt",
   subtitlesJson: "subtitles.json",
   renderPlan: "render-plan.json",

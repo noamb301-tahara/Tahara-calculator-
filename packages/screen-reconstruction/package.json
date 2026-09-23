@@ -1,0 +1,13 @@
+{
+  "name": "@studio/screen-reconstruction",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@studio/shared": "workspace:*",
+    "@studio/demo-data": "workspace:*",
+    "@studio/frame-analysis": "workspace:*",
+    "@studio/remotion-scenes": "workspace:*"
+  }
+}

@@ -20,7 +20,8 @@ const flag = (name: string) => {
 };
 
 const { config, root } = await loadConfig();
-const dir = resolve(root, "data/templates/demo-2fa");
+const dir = resolve(root, flag("dir") ?? "data/templates/demo-2fa");
+const outName = flag("out") ?? "demo-2fa";
 const tutorial = await readJsonAs(resolve(dir, "tutorial.json"), Tutorial);
 const screens = await readJsonAs(resolve(dir, "screens.json"), ScreenSetSchema);
 const preset = flag("preset");
@@ -32,14 +33,14 @@ const subtitles = buildSubtitles(
   timeline.entries.map((e) => ({ segmentId: e.segmentId, text: script.segments.find((s) => s.id === e.segmentId)!.text, start: e.speechStartSec, duration: e.speechSec })),
   config.subtitles,
 );
-const plan = buildRenderPlan({ projectId: "demo-2fa", tutorial, screens: screens.screens, script, timeline, subtitles, config, audio: null });
+const plan = buildRenderPlan({ projectId: outName, tutorial, screens: screens.screens, script, timeline, subtitles, config, audio: null });
 
-const out = resolve(root, "output/demo-2fa");
+const out = resolve(root, "output", outName);
 await writeJson(resolve(out, "render-plan.json"), plan);
 await writeFileAtomic(resolve(out, "script-he.txt"), scriptToText(script, tutorial));
 await writeFileAtomic(resolve(out, "subtitles.srt"), toSrt(subtitles));
 // Keep the Remotion Studio sample in sync with the demo.
-await writeJson(resolve(root, "apps/renderer/src/sample-plan.json"), plan);
+if (!flag("dir")) await writeJson(resolve(root, "apps/renderer/src/sample-plan.json"), plan);
 for (const e of timeline.entries) if (e.notes.length) console.warn(`[${e.segmentId}]`, e.notes.join("; "));
 console.log(`plan: ${plan.scenes.length} scenes, ${timeline.totalSec.toFixed(1)}s, ${plan.durationInFrames} frames`);
 
