@@ -1,0 +1,29 @@
+{
+  "name": "@studio/remotion-scenes",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fonts": "./src/fonts.ts",
+    "./engine": "./src/engine/index.ts",
+    "./plan": "./src/plan.ts"
+  },
+  "dependencies": {
+    "@fontsource/heebo": "^5.2.0",
+    "@fontsource/inter": "^5.2.0",
+    "@fontsource/rubik": "^5.2.0",
+    "@studio/shared": "workspace:*",
+    "lucide-react": "^1.47.0",
+    "remotion": "4.0.527"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  }
+}

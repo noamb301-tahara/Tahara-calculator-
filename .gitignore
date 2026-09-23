@@ -1,0 +1,16 @@
+node_modules/
+.next/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+# generated pipeline data (large media)
+data/projects/*
+!data/projects/.gitkeep
+output/*
+!output/.gitkeep
+input/*
+!input/.gitkeep
+.cache/
+apps/renderer/out/
+apps/renderer/public/projects/

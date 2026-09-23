@@ -1,0 +1,7 @@
+{
+  "style": { "preset": "modern-saas" },
+  "fidelity": { "mode": "faithful" },
+  "voice": { "provider": "auto" },
+  "transcription": { "provider": "auto" },
+  "llm": { "provider": "auto" }
+}

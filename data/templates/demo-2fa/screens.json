@@ -1,0 +1,764 @@
+{
+  "version": 1,
+  "fidelityMode": "faithful",
+  "screens": [
+    {
+      "id": "dashboard",
+      "name": "Dashboard",
+      "layout": "app",
+      "frame": "browser",
+      "direction": "ltr",
+      "browser": {
+        "url": "app.nimbus.example.com/home"
+      },
+      "app": {
+        "name": "Nimbus",
+        "logoText": "Nb"
+      },
+      "topbar": {
+        "search": {
+          "placeholder": "Search"
+        },
+        "actions": [
+          {
+            "kind": "icon_button",
+            "id": "btn-bell",
+            "icon": "bell",
+            "label": "Notifications"
+          }
+        ],
+        "user": {
+          "name": "Dana Green",
+          "id": "topbar-user"
+        }
+      },
+      "sidebar": {
+        "position": "left",
+        "items": [
+          {
+            "id": "nav-home",
+            "label": "Home",
+            "icon": "home",
+            "active": true
+          },
+          {
+            "id": "nav-projects",
+            "label": "Projects",
+            "icon": "folder",
+            "badge": "4"
+          },
+          {
+            "id": "nav-team",
+            "label": "Team",
+            "icon": "users"
+          },
+          {
+            "id": "nav-reports",
+            "label": "Reports",
+            "icon": "chart"
+          }
+        ],
+        "footer": [
+          {
+            "id": "nav-help",
+            "label": "Help center",
+            "icon": "help"
+          }
+        ]
+      },
+      "header": {
+        "title": "Good morning, Dana",
+        "subtitle": "Here is what's happening in your workspace",
+        "actions": []
+      },
+      "content": [
+        {
+          "kind": "grid",
+          "columns": 2,
+          "gap": 18,
+          "children": [
+            {
+              "kind": "metric",
+              "label": "Active projects",
+              "value": "12",
+              "delta": "+2 this week",
+              "trend": "up"
+            },
+            {
+              "kind": "metric",
+              "label": "Open tasks",
+              "value": "38",
+              "delta": "-5 since Monday",
+              "trend": "up"
+            }
+          ]
+        },
+        {
+          "kind": "card",
+          "title": "Recent projects",
+          "children": [
+            {
+              "kind": "list",
+              "items": [
+                {
+                  "id": "proj-1",
+                  "label": "Spring campaign",
+                  "description": "Updated 2h ago",
+                  "icon": "megaphone"
+                },
+                {
+                  "id": "proj-2",
+                  "label": "Website refresh",
+                  "description": "Updated yesterday",
+                  "icon": "globe"
+                },
+                {
+                  "id": "proj-3",
+                  "label": "Q3 planning",
+                  "description": "Updated 3 days ago",
+                  "icon": "calendar"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "kind": "menu",
+          "id": "user-menu",
+          "anchor": "topbar-user",
+          "placement": "bottom-end",
+          "title": "dana@example.com",
+          "items": [
+            {
+              "id": "menu-profile",
+              "label": "Profile",
+              "icon": "user"
+            },
+            {
+              "id": "menu-settings",
+              "label": "Settings",
+              "icon": "settings"
+            },
+            {
+              "id": "menu-billing",
+              "label": "Billing",
+              "icon": "credit-card"
+            },
+            {
+              "id": "menu-logout",
+              "label": "Log out",
+              "icon": "logout",
+              "dividerBefore": true
+            }
+          ],
+          "open": false
+        }
+      ],
+      "notes": "Hand-authored demo. Dummy data only."
+    },
+    {
+      "id": "dashboard-menu",
+      "name": "Dashboard",
+      "layout": "app",
+      "frame": "browser",
+      "direction": "ltr",
+      "browser": {
+        "url": "app.nimbus.example.com/home"
+      },
+      "app": {
+        "name": "Nimbus",
+        "logoText": "Nb"
+      },
+      "topbar": {
+        "search": {
+          "placeholder": "Search"
+        },
+        "actions": [
+          {
+            "kind": "icon_button",
+            "id": "btn-bell",
+            "icon": "bell",
+            "label": "Notifications"
+          }
+        ],
+        "user": {
+          "name": "Dana Green",
+          "id": "topbar-user"
+        }
+      },
+      "sidebar": {
+        "position": "left",
+        "items": [
+          {
+            "id": "nav-home",
+            "label": "Home",
+            "icon": "home",
+            "active": true
+          },
+          {
+            "id": "nav-projects",
+            "label": "Projects",
+            "icon": "folder",
+            "badge": "4"
+          },
+          {
+            "id": "nav-team",
+            "label": "Team",
+            "icon": "users"
+          },
+          {
+            "id": "nav-reports",
+            "label": "Reports",
+            "icon": "chart"
+          }
+        ],
+        "footer": [
+          {
+            "id": "nav-help",
+            "label": "Help center",
+            "icon": "help"
+          }
+        ]
+      },
+      "header": {
+        "title": "Good morning, Dana",
+        "subtitle": "Here is what's happening in your workspace",
+        "actions": []
+      },
+      "content": [
+        {
+          "kind": "grid",
+          "columns": 2,
+          "gap": 18,
+          "children": [
+            {
+              "kind": "metric",
+              "label": "Active projects",
+              "value": "12",
+              "delta": "+2 this week",
+              "trend": "up"
+            },
+            {
+              "kind": "metric",
+              "label": "Open tasks",
+              "value": "38",
+              "delta": "-5 since Monday",
+              "trend": "up"
+            }
+          ]
+        },
+        {
+          "kind": "card",
+          "title": "Recent projects",
+          "children": [
+            {
+              "kind": "list",
+              "items": [
+                {
+                  "id": "proj-1",
+                  "label": "Spring campaign",
+                  "description": "Updated 2h ago",
+                  "icon": "megaphone"
+                },
+                {
+                  "id": "proj-2",
+                  "label": "Website refresh",
+                  "description": "Updated yesterday",
+                  "icon": "globe"
+                },
+                {
+                  "id": "proj-3",
+                  "label": "Q3 planning",
+                  "description": "Updated 3 days ago",
+                  "icon": "calendar"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "kind": "menu",
+          "id": "user-menu",
+          "anchor": "topbar-user",
+          "placement": "bottom-end",
+          "title": "dana@example.com",
+          "items": [
+            {
+              "id": "menu-profile",
+              "label": "Profile",
+              "icon": "user"
+            },
+            {
+              "id": "menu-settings",
+              "label": "Settings",
+              "icon": "settings"
+            },
+            {
+              "id": "menu-billing",
+              "label": "Billing",
+              "icon": "credit-card"
+            },
+            {
+              "id": "menu-logout",
+              "label": "Log out",
+              "icon": "logout",
+              "dividerBefore": true
+            }
+          ],
+          "open": true
+        }
+      ],
+      "notes": "Hand-authored demo. Dummy data only."
+    },
+    {
+      "id": "settings-general",
+      "name": "Settings",
+      "layout": "app",
+      "frame": "browser",
+      "direction": "ltr",
+      "browser": {
+        "url": "app.nimbus.example.com/settings/general"
+      },
+      "app": {
+        "name": "Nimbus",
+        "logoText": "Nb"
+      },
+      "topbar": {
+        "search": {
+          "placeholder": "Search"
+        },
+        "actions": [
+          {
+            "kind": "icon_button",
+            "id": "btn-bell",
+            "icon": "bell",
+            "label": "Notifications"
+          }
+        ],
+        "user": {
+          "name": "Dana Green",
+          "id": "topbar-user"
+        }
+      },
+      "sidebar": {
+        "position": "left",
+        "items": [
+          {
+            "id": "nav-home",
+            "label": "Home",
+            "icon": "home"
+          },
+          {
+            "id": "nav-projects",
+            "label": "Projects",
+            "icon": "folder",
+            "badge": "4"
+          },
+          {
+            "id": "nav-team",
+            "label": "Team",
+            "icon": "users"
+          },
+          {
+            "id": "nav-reports",
+            "label": "Reports",
+            "icon": "chart"
+          }
+        ],
+        "footer": [
+          {
+            "id": "nav-help",
+            "label": "Help center",
+            "icon": "help"
+          }
+        ]
+      },
+      "header": {
+        "title": "Settings",
+        "subtitle": "Manage your account and workspace",
+        "breadcrumbs": [
+          "Account",
+          "Settings"
+        ],
+        "actions": []
+      },
+      "content": [
+        {
+          "kind": "tabs",
+          "id": "settings-tabs",
+          "tabs": [
+            {
+              "id": "tab-general",
+              "label": "General"
+            },
+            {
+              "id": "tab-security",
+              "label": "Security"
+            },
+            {
+              "id": "tab-notifications",
+              "label": "Notifications"
+            }
+          ],
+          "active": "tab-general"
+        },
+        {
+          "kind": "card",
+          "title": "Workspace",
+          "children": [
+            {
+              "kind": "input",
+              "id": "input-workspace",
+              "label": "Workspace name",
+              "value": "Bright Studio"
+            },
+            {
+              "kind": "dropdown",
+              "id": "dd-language",
+              "label": "Language",
+              "value": "en",
+              "options": [
+                {
+                  "id": "en",
+                  "label": "English"
+                },
+                {
+                  "id": "he",
+                  "label": "Hebrew"
+                },
+                {
+                  "id": "fr",
+                  "label": "French"
+                }
+              ]
+            },
+            {
+              "kind": "row",
+              "justify": "end",
+              "children": [
+                {
+                  "kind": "button",
+                  "id": "btn-save",
+                  "label": "Save changes",
+                  "variant": "primary"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "overlays": []
+    },
+    {
+      "id": "settings-security",
+      "name": "Settings",
+      "layout": "app",
+      "frame": "browser",
+      "direction": "ltr",
+      "browser": {
+        "url": "app.nimbus.example.com/settings/security"
+      },
+      "app": {
+        "name": "Nimbus",
+        "logoText": "Nb"
+      },
+      "topbar": {
+        "search": {
+          "placeholder": "Search"
+        },
+        "actions": [
+          {
+            "kind": "icon_button",
+            "id": "btn-bell",
+            "icon": "bell",
+            "label": "Notifications"
+          }
+        ],
+        "user": {
+          "name": "Dana Green",
+          "id": "topbar-user"
+        }
+      },
+      "sidebar": {
+        "position": "left",
+        "items": [
+          {
+            "id": "nav-home",
+            "label": "Home",
+            "icon": "home"
+          },
+          {
+            "id": "nav-projects",
+            "label": "Projects",
+            "icon": "folder",
+            "badge": "4"
+          },
+          {
+            "id": "nav-team",
+            "label": "Team",
+            "icon": "users"
+          },
+          {
+            "id": "nav-reports",
+            "label": "Reports",
+            "icon": "chart"
+          }
+        ],
+        "footer": [
+          {
+            "id": "nav-help",
+            "label": "Help center",
+            "icon": "help"
+          }
+        ]
+      },
+      "header": {
+        "title": "Settings",
+        "subtitle": "Manage your account and workspace",
+        "breadcrumbs": [
+          "Account",
+          "Settings"
+        ],
+        "actions": []
+      },
+      "content": [
+        {
+          "kind": "tabs",
+          "id": "settings-tabs",
+          "tabs": [
+            {
+              "id": "tab-general",
+              "label": "General"
+            },
+            {
+              "id": "tab-security",
+              "label": "Security"
+            },
+            {
+              "id": "tab-notifications",
+              "label": "Notifications"
+            }
+          ],
+          "active": "tab-security"
+        },
+        {
+          "kind": "card",
+          "title": "Sign-in security",
+          "subtitle": "Protect your account with an extra step at sign-in",
+          "children": [
+            {
+              "kind": "setting_row",
+              "id": "row-2fa",
+              "label": "Two-factor authentication",
+              "description": "Require a code from your authenticator app",
+              "control": {
+                "kind": "toggle",
+                "id": "toggle-2fa",
+                "label": "Two-factor authentication",
+                "on": false
+              }
+            },
+            {
+              "kind": "divider"
+            },
+            {
+              "kind": "setting_row",
+              "id": "row-alerts",
+              "label": "Login alerts",
+              "description": "Email me when a new device signs in",
+              "control": {
+                "kind": "toggle",
+                "id": "toggle-alerts",
+                "label": "Login alerts",
+                "on": true
+              }
+            },
+            {
+              "kind": "divider"
+            },
+            {
+              "kind": "setting_row",
+              "id": "row-sessions",
+              "label": "Active sessions",
+              "description": "3 devices",
+              "control": {
+                "kind": "button",
+                "id": "btn-sessions",
+                "label": "Manage",
+                "variant": "secondary",
+                "size": "sm"
+              }
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "kind": "toast",
+          "id": "toast-2fa",
+          "text": "Two-factor authentication enabled",
+          "tone": "success",
+          "open": false
+        }
+      ]
+    },
+    {
+      "id": "settings-security-done",
+      "name": "Settings",
+      "layout": "app",
+      "frame": "browser",
+      "direction": "ltr",
+      "browser": {
+        "url": "app.nimbus.example.com/settings/security"
+      },
+      "app": {
+        "name": "Nimbus",
+        "logoText": "Nb"
+      },
+      "topbar": {
+        "search": {
+          "placeholder": "Search"
+        },
+        "actions": [
+          {
+            "kind": "icon_button",
+            "id": "btn-bell",
+            "icon": "bell",
+            "label": "Notifications"
+          }
+        ],
+        "user": {
+          "name": "Dana Green",
+          "id": "topbar-user"
+        }
+      },
+      "sidebar": {
+        "position": "left",
+        "items": [
+          {
+            "id": "nav-home",
+            "label": "Home",
+            "icon": "home"
+          },
+          {
+            "id": "nav-projects",
+            "label": "Projects",
+            "icon": "folder",
+            "badge": "4"
+          },
+          {
+            "id": "nav-team",
+            "label": "Team",
+            "icon": "users"
+          },
+          {
+            "id": "nav-reports",
+            "label": "Reports",
+            "icon": "chart"
+          }
+        ],
+        "footer": [
+          {
+            "id": "nav-help",
+            "label": "Help center",
+            "icon": "help"
+          }
+        ]
+      },
+      "header": {
+        "title": "Settings",
+        "subtitle": "Manage your account and workspace",
+        "breadcrumbs": [
+          "Account",
+          "Settings"
+        ],
+        "actions": []
+      },
+      "content": [
+        {
+          "kind": "tabs",
+          "id": "settings-tabs",
+          "tabs": [
+            {
+              "id": "tab-general",
+              "label": "General"
+            },
+            {
+              "id": "tab-security",
+              "label": "Security"
+            },
+            {
+              "id": "tab-notifications",
+              "label": "Notifications"
+            }
+          ],
+          "active": "tab-security"
+        },
+        {
+          "kind": "card",
+          "title": "Sign-in security",
+          "subtitle": "Protect your account with an extra step at sign-in",
+          "children": [
+            {
+              "kind": "setting_row",
+              "id": "row-2fa",
+              "label": "Two-factor authentication",
+              "description": "Require a code from your authenticator app",
+              "control": {
+                "kind": "toggle",
+                "id": "toggle-2fa",
+                "label": "Two-factor authentication",
+                "on": true
+              }
+            },
+            {
+              "kind": "divider"
+            },
+            {
+              "kind": "setting_row",
+              "id": "row-alerts",
+              "label": "Login alerts",
+              "description": "Email me when a new device signs in",
+              "control": {
+                "kind": "toggle",
+                "id": "toggle-alerts",
+                "label": "Login alerts",
+                "on": true
+              }
+            },
+            {
+              "kind": "divider"
+            },
+            {
+              "kind": "setting_row",
+              "id": "row-sessions",
+              "label": "Active sessions",
+              "description": "3 devices",
+              "control": {
+                "kind": "button",
+                "id": "btn-sessions",
+                "label": "Manage",
+                "variant": "secondary",
+                "size": "sm"
+              }
+            }
+          ]
+        }
+      ],
+      "overlays": [
+        {
+          "kind": "toast",
+          "id": "toast-2fa",
+          "text": "Two-factor authentication enabled",
+          "tone": "success",
+          "open": true
+        }
+      ]
+    }
+  ],
+  "substitutions": []
+}
