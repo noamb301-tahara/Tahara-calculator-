@@ -70,3 +70,27 @@ describe("toggle cues", () => {
     expect(c[1]).toMatchObject({ action: "toggle", value: "on" });
   });
 });
+
+describe("captions as narration", () => {
+  it("takes a quoted label verbatim and drops possessives", async () => {
+    const { parseCues } = await import("../src/cues");
+    const cues = parseCues([
+      { id: "c1", start: 0, end: 3, text: '2. Click "Invite member"' },
+      { id: "c2", start: 3, end: 6, text: "3. Type their email address" },
+    ], { tail: 0.3 });
+    expect(cues.map((c) => [c.action, c.targets[0]])).toEqual([["click", "Invite member"], ["type", "email address"]]);
+    expect(cues[0]!.windowEnd).toBeCloseTo(3.3);
+  });
+  it("uses captions only when nothing was spoken", async () => {
+    const { narrationFor } = await import("../src/narration");
+    const { FramesAnalysisResult } = await import("@studio/shared");
+    const frames = FramesAnalysisResult.parse({
+      frames: [], analyses: [], motionEvents: [], cursorTrack: [], sensitive: [], providers: { ocr: "t", vision: null }, region: { x: 0, y: 0, w: 1, h: 1 },
+      captions: { band: { x: 0, y: 0, w: 1, h: 1 }, segments: [{ id: "cap-1", start: 0, end: 2, text: "1. Click Team" }] },
+    });
+    const silent = { language: null, languageConfidence: null, provider: "none", text: "", segments: [], hasWordTimestamps: false, notes: [] };
+    expect(narrationFor(silent, frames).provider).toBe("on-screen captions");
+    const spoken = { ...silent, provider: "whisper", text: "Click Team", segments: [{ id: "s1", start: 0, end: 1, text: "Click Team" }] };
+    expect(narrationFor(spoken, frames).provider).toBe("whisper");
+  });
+});

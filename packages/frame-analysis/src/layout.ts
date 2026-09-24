@@ -59,7 +59,7 @@ export function analyzeLayout(lines: OcrLine[], region: BBox, chrome: LayoutChro
     const sb = chrome.sidebar;
     const sidebar = sb ? inRegion.filter((l) => l.bbox.x >= sb.x - 2 && l.bbox.x + l.bbox.w <= sb.x + sb.w + 2 && inside(l.bbox, sb)) : [];
     const sideSet = new Set(sidebar);
-    const topbar = inRegion.filter((l) => !sideSet.has(l) && (chrome.topbar ? inside(l.bbox, chrome.topbar) : l.bbox.y < region.y + region.h * 0.075));
+    const topbar = inRegion.filter((l) => !sideSet.has(l) && (chrome.topbar ? inside(l.bbox, chrome.topbar) : l.bbox.y < region.y + Math.min(region.h * 0.075, region.w * 0.1)));
     const topSet = new Set(topbar);
     const content = inRegion.filter((l) => !sideSet.has(l) && !topSet.has(l)).sort((a, b) => a.bbox.y - b.bbox.y || a.bbox.x - b.bbox.x);
     return finish(region, sidebar, topbar, content, outside);
@@ -79,8 +79,9 @@ export function analyzeLayout(lines: OcrLine[], region: BBox, chrome: LayoutChro
   const contentLeft = sidebar.length ? Math.max(...sidebar.map((l) => l.bbox.x + l.bbox.w)) + 10 : region.x;
 
   const rest = inRegion.filter((l) => !sideSet.has(l));
-  const topH = region.h * 0.075;
-  const topbar = rest.filter((l) => l.bbox.y < region.y + topH && l.bbox.x >= contentLeft - 5);
+  // A top bar is a thin strip; in a tall full-frame recording 7.5% of the height would swallow the page title.
+  const topH = Math.min(region.h * 0.075, region.w * 0.1);
+  const topbar = rest.filter((l) => l.bbox.y + l.bbox.h / 2 < region.y + topH && l.bbox.x >= contentLeft - 5);
   const topSet = new Set(topbar);
   const content = rest.filter((l) => !topSet.has(l)).sort((a, b) => a.bbox.y - b.bbox.y || a.bbox.x - b.bbox.x);
   return finish(region, sidebar, topbar, content, outside);

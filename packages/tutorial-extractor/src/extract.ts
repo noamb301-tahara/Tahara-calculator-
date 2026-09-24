@@ -1,3 +1,4 @@
+import { parseCues } from "./cues";
 import {
   Tutorial,
   labelSimilarity,
@@ -64,7 +65,8 @@ export function describeLocation(b: BBox | undefined, region: BBox, inSidebar: b
   const c = center(b);
   const fx = (c.x - region.x) / region.w;
   const fy = (c.y - region.y) / region.h;
-  if (fy < 0.08) return fx > 0.66 ? "top bar, right" : fx < 0.33 ? "top bar, left" : "top bar";
+  // Same thin top strip as the layout analysis (not a share of a tall full-frame height).
+  if (c.y - region.y < Math.min(region.h * 0.075, region.w * 0.1)) return fx > 0.66 ? "top bar, right" : fx < 0.33 ? "top bar, left" : "top bar";
   const v = fy < 0.33 ? "top" : fy > 0.7 ? "bottom" : "middle";
   const h = fx > 0.66 ? "right" : fx < 0.33 ? "left" : "center";
   return v === "middle" && h === "center" ? "center of the page" : `${v} ${h} of the page`;
@@ -129,7 +131,10 @@ export function inferTitle(transcript: Transcript, frames: FramesAnalysisResult)
     }
   }
   const caption = frames.analyses[0] ? analyzeLayout(frames.analyses[0].ocr.lines, frames.region, frames.chrome).outside.filter((l) => l.bbox.y < frames.region.y).sort((a, b) => b.bbox.h - a.bbox.h)[0] : undefined;
-  const howTo = how?.[1]?.trim() ?? (caption ? /how to (.+)/i.exec(caption.text)?.[1] ?? null : null);
+  // Captions-only videos open with a title card ("Invite a teammate in 30 seconds").
+  const opener = transcript.provider === "on-screen captions" ? transcript.segments[0]?.text : undefined;
+  const openerHowTo = opener && parseCues([transcript.segments[0]!]).length === 0 ? opener.replace(/\s+(?:in\s+\d+\s+(?:seconds?|secs?|minutes?|mins?|steps?)|fast|quickly|easily)[.!]?$/i, "").replace(/[.!]+$/, "").trim() : null;
+  const howTo = how?.[1]?.trim() ?? (caption ? /how to (.+)/i.exec(caption.text)?.[1] ?? null : null) ?? (openerHowTo ? openerHowTo.charAt(0).toLowerCase() + openerHowTo.slice(1) : null);
   const title = caption?.text ?? (howTo ? `How to ${howTo}` : "Tutorial");
   return { title: title.charAt(0).toUpperCase() + title.slice(1), howTo, app };
 }

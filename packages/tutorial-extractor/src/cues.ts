@@ -39,7 +39,13 @@ const STOP = /\b(in|on|at|from|to|and|then|so|which|that|under|inside|near|next|
 const LOCATION = /\b(?:in|on|at|from|under|inside)\s+(?:the\s+)?((?:top|bottom|upper|lower|left|right|side|main|account|user|profile|navigation|nav)?\s*(?:[\w-]+\s+){0,2}(?:sidebar|side bar|menu|corner|bar|toolbar|header|panel|tab|tabs|dialog|window|page|screen|section|top right|top left|bottom right|bottom left|right|left|top|bottom))\b/i;
 const TYPE_WORDS = /\s+(button|menu|tab|link|icon|option|field|box|dropdown|toggle|switch|checkbox|item)$/i;
 
-export function parseCues(segments: TranscriptSegment[]): Cue[] {
+export interface CueOptions {
+  /** Seconds after a segment ends that its action may still happen (speech runs ahead of the hand; a caption stays up during it). */
+  tail?: number;
+}
+
+export function parseCues(segments: TranscriptSegment[], opts: CueOptions = {}): Cue[] {
+  const tailSec = opts.tail ?? 3;
   const out: Cue[] = [];
   for (const seg of segments) {
     const sentence = seg.text;
@@ -51,9 +57,11 @@ export function parseCues(segments: TranscriptSegment[]): Cue[] {
       const start = (m.index ?? 0) + m[0].length;
       const nextVerbAt = matches[k + 1]?.index ?? sentence.length;
       const tail = sentence.slice(start, nextVerbAt);
+      // A quoted label ('Click "Invite member"', common in captions) is the exact target.
+      const quoted = /^\s*(?:on\s+)?(?:the\s+)?["“'‘]([^"”'’]{1,40})["”'’]/.exec(tail)?.[1];
       const cut = tail.search(STOP);
-      let phrase = (cut >= 0 ? tail.slice(0, cut) : tail).trim();
-      phrase = phrase.replace(/^(?:the|a|an|your|our|this|that|on|into|in)\s+/i, "").replace(/^(?:the|a|an)\s+/i, "").trim();
+      let phrase = quoted ?? (cut >= 0 ? tail.slice(0, cut) : tail).trim();
+      phrase = phrase.replace(/^(?:the|a|an|your|our|their|his|her|my|this|that|on|into|in)\s+/i, "").replace(/^(?:the|a|an)\s+/i, "").trim();
       const kind = TYPE_WORDS.exec(phrase)?.[1]?.toLowerCase() ?? null;
       phrase = phrase.replace(TYPE_WORDS, "").trim();
       if (!phrase && action !== "scroll") continue;
@@ -74,7 +82,7 @@ export function parseCues(segments: TranscriptSegment[]): Cue[] {
         container: null,
         time,
         windowStart: seg.start - 0.5,
-        windowEnd: seg.end + 3,
+        windowEnd: seg.end + tailSec,
         segmentId: seg.id,
         sentence,
       });

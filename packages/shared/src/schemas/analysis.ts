@@ -209,6 +209,14 @@ export const FramesAnalysisResult = z.object({
     .object({ detected: z.boolean(), sidebar: BBox.nullable(), topbar: BBox.nullable() })
     .nullable()
     .default(null),
+  /**
+   * Burned-in captions (videos that teach with on-screen text instead of, or besides, narration).
+   * Their lines are removed from the frames' OCR so they never become UI; `segments` can stand in for a transcript.
+   */
+  captions: z
+    .object({ band: BBox, segments: z.array(TranscriptSegment) })
+    .nullable()
+    .default(null),
 });
 export type FramesAnalysisResult = z.infer<typeof FramesAnalysisResult>;
 

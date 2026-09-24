@@ -25,7 +25,7 @@ import { ensureDir, exists, readJson, readJsonAs, sha256File, writeFileAtomic, w
 import { ingestVideo } from "@studio/video-ingestion";
 import { transcribe, transcriptToText } from "@studio/transcription";
 import { analyzeFrames, findTextInVideo } from "@studio/frame-analysis";
-import { detectActions, extractTutorial } from "@studio/tutorial-extractor";
+import { detectActions, extractTutorial, narrationFor } from "@studio/tutorial-extractor";
 import { reconstructScreens } from "@studio/screen-reconstruction";
 import { scriptToText, writeScript } from "@studio/script-writer";
 import { assembleVoiceTrack, buildVoiceTrack, chooseProvider, synthesizeSegments } from "@studio/voice";
@@ -143,7 +143,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "analyze_frames",
-    version: 6,
+    version: 9,
     inputs: () => [PROJECT_FILES.media, PROJECT_FILES.transcriptJson, PROJECT_FILES.motion],
     params: (ctx) => ({ a: ctx.config.analysis, vision: ctx.llm ? ctx.config.llm.visionModel : null }),
     outputs: () => [PROJECT_FILES.framesAnalysis],
@@ -167,14 +167,14 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "detect_actions",
-    version: 3,
+    version: 5,
     inputs: () => [PROJECT_FILES.framesAnalysis, PROJECT_FILES.transcriptJson],
     params: (ctx) => ctx.config.thresholds.actionMin,
     outputs: () => [PROJECT_FILES.actions],
     skip: isManual,
     async run(ctx) {
       const frames = await readJsonAs(p(ctx, PROJECT_FILES.framesAnalysis), FramesAnalysisResult);
-      const transcript = await readJsonAs(p(ctx, PROJECT_FILES.transcriptJson), Transcript);
+      const transcript = narrationFor(await readJsonAs(p(ctx, PROJECT_FILES.transcriptJson), Transcript), frames);
       const actions = detectActions({ transcript, frames, minConfidence: ctx.config.thresholds.actionMin });
       await writeJson(p(ctx, PROJECT_FILES.actions), { actions });
       return { outputs: [PROJECT_FILES.actions], provider: "fusion", notes: actions.map((a) => `${a.timestamp.toFixed(2)}s ${a.action} "${a.target ?? "?"}" (${a.confidence})`) };
@@ -182,14 +182,14 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "extract_tutorial",
-    version: 7,
+    version: 9,
     inputs: () => [PROJECT_FILES.actions, PROJECT_FILES.framesAnalysis, PROJECT_FILES.transcriptJson, PROJECT_FILES.media],
     params: (ctx) => ({ th: ctx.config.thresholds, f: ctx.config.fidelity, llm: ctx.llm ? ctx.config.llm.model : null }),
     outputs: () => [PROJECT_FILES.tutorialAuto, PROJECT_FILES.sourceAnalysis],
     skip: isManual,
     async run(ctx) {
       const frames = await readJsonAs(p(ctx, PROJECT_FILES.framesAnalysis), FramesAnalysisResult);
-      const transcript = await readJsonAs(p(ctx, PROJECT_FILES.transcriptJson), Transcript);
+      const transcript = narrationFor(await readJsonAs(p(ctx, PROJECT_FILES.transcriptJson), Transcript), frames);
       const ingest = await readJsonAs(p(ctx, PROJECT_FILES.media), IngestResult);
       const { actions } = await readJson<{ actions: DetectedAction[] }>(p(ctx, PROJECT_FILES.actions));
       let tutorial = extractTutorial({ transcript, frames, actions, media: ingest.media, config: ctx.config });

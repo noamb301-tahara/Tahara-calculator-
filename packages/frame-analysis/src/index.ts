@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  FrameAnalysis as FrameAnalysisSchema,
   FramesAnalysisResult,
   PROJECT_FILES,
   frameFileName,
@@ -21,6 +22,7 @@ import { ocrColoredControls } from "./buttons";
 import { planFrameSamples } from "./sampling";
 import { analyzeLayout, estimateScreenRegion, heuristicElements } from "./layout";
 import { combineChrome, detectAppChrome } from "./chrome";
+import { detectCaptions, maskCaptionMotion, stripCaptions } from "./captions";
 
 export * from "./motion";
 export * from "./ocr";
@@ -28,6 +30,7 @@ export * from "./sampling";
 export * from "./layout";
 export * from "./buttons";
 export * from "./chrome";
+export * from "./captions";
 
 /** Optional vision model hook (Claude vision), injected by the pipeline. */
 export interface VisionAnalyzer {
@@ -81,7 +84,8 @@ export async function analyzeFrames(input: AnalyzeFramesInput): Promise<FramesAn
   const analyses: FrameAnalysis[] = [];
   const sensitive: SensitiveFinding[] = [];
   const visionBudget = { left: input.vision ? config.llm.maxVisionFrames : 0 };
-  const results = await mapLimit(frames, 3, async (f) => {
+  // Pass 1: OCR every frame.
+  const ocrs = await mapLimit(frames, 3, async (f) => {
     const ocr = canOcr ? await ocrImage(join(projectDir, f.file), config.analysis.ocrLanguages, config.analysis.ocrMinConfidence) : { words: [], lines: [], meanConfidence: null };
     if (canOcr) {
       // Text inside filled buttons/toasts is missed by the main pass.
@@ -92,7 +96,20 @@ export async function analyzeFrames(input: AnalyzeFramesInput): Promise<FramesAn
       }
       ocr.lines.sort((a, b) => a.bbox.y - b.bbox.y || a.bbox.x - b.bbox.x);
     }
-    const layout = analyzeLayout(ocr.lines, region, chrome);
+    // Personal data is looked for in everything on screen, captions included.
+    const found = ocr.lines.flatMap((l) => detectSensitive(l.text, { frameId: f.id }).map((s) => ({ ...s, bbox: l.bbox })));
+    return FrameAnalysisSchema.parse({ frameId: f.id, time: f.time, file: f.file, ocr, sensitive: found });
+  });
+
+  // Burned-in captions are instructions, not UI: keep them as a track and take them out of the OCR.
+  const captions = detectCaptions(ocrs, ingest.media.width, motion.events);
+  if (captions) input.log?.(`on-screen captions detected (${captions.segments.length} segments)`);
+  const clean = captions ? ocrs.map((a) => stripCaptions(a, captions, ingest.media.width)) : ocrs;
+
+  // Pass 2: layout (+ vision) on the UI text.
+  const results = await mapLimit(clean, 3, async (a) => {
+    const f = frames.find((x) => x.id === a.frameId)!;
+    const layout = analyzeLayout(a.ocr.lines, region, chrome);
     let elements = heuristicElements(layout);
     let description: string | null = null;
     let pageTitle = layout.title?.text ?? null;
@@ -100,7 +117,7 @@ export async function analyzeFrames(input: AnalyzeFramesInput): Promise<FramesAn
     if (input.vision && important && visionBudget.left > 0) {
       visionBudget.left--;
       try {
-        const v = await input.vision.analyzeFrame({ file: join(projectDir, f.file), ocrText: ocr.lines.map((l) => l.text), time: f.time });
+        const v = await input.vision.analyzeFrame({ file: join(projectDir, f.file), ocrText: a.ocr.lines.map((l) => l.text), time: f.time });
         description = v.description;
         pageTitle = v.pageTitle ?? pageTitle;
         if (v.elements.length) elements = [...v.elements, ...elements.filter((e) => !v.elements.some((ve) => ve.label === e.label))];
@@ -108,8 +125,7 @@ export async function analyzeFrames(input: AnalyzeFramesInput): Promise<FramesAn
         input.log?.(`vision failed for ${f.id}: ${(err as Error).message}`);
       }
     }
-    const found = ocr.lines.flatMap((l) => detectSensitive(l.text, { frameId: f.id }).map((s) => ({ ...s, bbox: l.bbox })));
-    return { frame: f, analysis: { frameId: f.id, time: f.time, file: f.file, ocr, elements, description, pageTitle, sensitive: found } satisfies FrameAnalysis };
+    return { frame: f, analysis: { ...a, elements, description, pageTitle } satisfies FrameAnalysis };
   });
   for (const r of results) {
     analyses.push(r.analysis);
@@ -119,12 +135,13 @@ export async function analyzeFrames(input: AnalyzeFramesInput): Promise<FramesAn
   return FramesAnalysisResult.parse({
     frames,
     analyses,
-    motionEvents: motion.events,
+    motionEvents: captions ? maskCaptionMotion(motion.events, captions.band) : motion.events,
     cursorTrack: motion.cursor,
     sensitive,
     providers: { ocr: canOcr ? "tesseract" : "none", vision: input.vision?.name ?? null },
     region,
     chrome,
+    captions,
   });
 }
 

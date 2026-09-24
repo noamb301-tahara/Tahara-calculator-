@@ -100,7 +100,8 @@ export function detectActions(input: DetectActionsInput): DetectedAction[] {
   const analyses = frames.analyses;
   const track = frames.cursorTrack;
   const visuals = visualEvents(frames.motionEvents, track);
-  const cues = parseCues(input.transcript.segments);
+  // A caption is on screen for the whole action it describes; narration is spoken ahead of it.
+  const cues = parseCues(input.transcript.segments, { tail: input.transcript.provider === "on-screen captions" ? 0.3 : 3 });
   const actions: DetectedAction[] = [];
 
   for (const cue of cues) {
