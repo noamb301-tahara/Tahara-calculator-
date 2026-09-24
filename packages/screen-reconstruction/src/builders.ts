@@ -193,7 +193,13 @@ export function buildPage(lines: OcrLine[]): PageModel {
     const below = sorted.filter((l) => !used.has(l) && l.bbox.y > titleLine.bbox.y && l.bbox.y - (titleLine.bbox.y + titleLine.bbox.h) < 110 && l.source !== "control");
     for (const row of cluster(below, (l) => l.bbox.y + l.bbox.h / 2, 10).values()) {
       const short = row.filter((l) => l.text.split(/\s+/).length <= 2 && !BUTTON_WORDS.test(l.text));
-      if (short.length >= 3 && short.length === row.length) {
+      // A table header looks the same, but rows of cells aligned to its columns follow it.
+      const xs = row.map((l) => l.bbox.x);
+      const rowY = row[0]!.bbox.y;
+      const isHeader = [...cluster(sorted.filter((l) => l.bbox.y > rowY + 10 && l.bbox.y < rowY + 260), (l) => l.bbox.y + l.bbox.h / 2, 9).values()].some(
+        (r) => r.length >= 2 && r.filter((c) => xs.some((x) => Math.abs(c.bbox.x - x) < 25)).length >= Math.min(3, row.length),
+      );
+      if (short.length >= 3 && short.length === row.length && !isHeader) {
         const tabs = row.sort((a, b) => a.bbox.x - b.bbox.x).map((l) => ({ id: idFor("tab", cleanLabel(l.text)), label: cleanLabel(l.text) }));
         for (const l of row) used.add(l);
         blocks.push({ y: row[0]!.bbox.y, el: { kind: "tabs", id: idFor("tabs", tabs.map((t) => t.label).join(" ")), tabs, active: tabs[0]!.id } });

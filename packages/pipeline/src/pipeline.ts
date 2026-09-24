@@ -126,6 +126,8 @@ export class Pipeline {
   /** Run the pipeline for one project. Failed stages mark the project ERROR and rethrow. */
   async run(projectId: string, opts: RunOptions = {}): Promise<Project> {
     let project = await this.store.require(projectId);
+    const startStatus = project.status;
+    let ranAny = false;
     const startIdx = opts.from ? STAGE_ORDER.indexOf(opts.from) : 0;
     const endIdx = opts.until ? STAGE_ORDER.indexOf(opts.until) : STAGE_ORDER.length - 1;
     const runLog = this.context(project).log;
@@ -154,6 +156,7 @@ export class Pipeline {
       }
 
       await this.moveTo(projectId, statusForStage(stage.name), `stage ${stage.name}`);
+      ranAny = true;
       const started = Date.now();
       const attempts = (prev?.attempts ?? 0) + 1;
       await this.store.updateStage(projectId, stage.name, { status: "running", startedAt: new Date(started).toISOString(), attempts, error: null, cached: false });
@@ -191,6 +194,11 @@ export class Pipeline {
       }
     }
     if (endIdx === STAGE_ORDER.length - 1) await this.moveTo(projectId, "COMPLETE");
+    // A partial run that only hit the cache changed nothing: a finished project stays finished.
+    else if (!ranAny && startStatus === "COMPLETE") {
+      const p = await this.store.require(projectId);
+      if (p.status !== startStatus) await this.store.save({ ...p, status: startStatus, history: p.history.slice(0, p.history.length - countSince(p.history, startStatus)) });
+    }
     return this.store.require(projectId);
   }
 
@@ -266,4 +274,11 @@ export interface BatchReport {
   needsReview: number;
   failed: number;
   items: BatchItem[];
+}
+
+/** History entries recorded after the last move into `status`. */
+function countSince(history: { to: string }[], status: string): number {
+  let n = 0;
+  for (let i = history.length - 1; i >= 0 && history[i]!.to !== status; i--) n++;
+  return n;
 }
