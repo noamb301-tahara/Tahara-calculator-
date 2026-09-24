@@ -73,7 +73,11 @@ export function slugify(input: string, maxLength = 40): string {
 /** Deterministic id: same source file => same project => cache hits. */
 export function projectIdFor(filename: string, sha256: string): string {
   const base = filename.replace(/\.[^.]+$/, "");
-  return `${slugify(base)}-${sha256.slice(0, 8)}`;
+  // Non-Latin names (Hebrew lesson titles) slug to little or nothing: keep the numbers, prefix "video".
+  const latin = /[a-z]/i.test(base.replace(/[^\x00-\x7F]/g, ""));
+  const digits = base.match(/\d+/g)?.join("-");
+  const slug = latin ? slugify(base) : digits ? `video-${digits}` : "video";
+  return `${slug}-${sha256.slice(0, 8)}`;
 }
 
 /** Name for an extracted frame, sortable by time: f-000012340.jpg for t=12.34s. */

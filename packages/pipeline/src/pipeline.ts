@@ -211,7 +211,11 @@ export class Pipeline {
 
   /** Module 23 — batch: bounded concurrency, retries, one failure never stops the queue. */
   async runBatch(inputDir: string, opts: RunOptions & { concurrency?: number; retries?: number } = {}): Promise<BatchReport> {
-    const files = (await readdir(resolve(inputDir))).filter(isSupportedVideo).sort().map((f) => join(resolve(inputDir), f));
+    // Courses keep lessons in sub-folders: include them (hidden folders and our own outputs are skipped).
+    const files = (await readdir(resolve(inputDir), { recursive: true }))
+      .filter((f) => isSupportedVideo(f) && !f.split(/[\\/]/).some((part) => part.startsWith(".") || part === "node_modules"))
+      .sort()
+      .map((f) => join(resolve(inputDir), f));
     const concurrency = opts.concurrency ?? this.config.batch.concurrency;
     const retries = opts.retries ?? this.config.batch.retries;
     const started = Date.now();

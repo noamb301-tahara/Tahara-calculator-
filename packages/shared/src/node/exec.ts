@@ -52,7 +52,11 @@ const whichCache = new Map<string, boolean>();
 /** True if an executable is available on PATH. */
 export async function hasCommand(cmd: string): Promise<boolean> {
   if (whichCache.has(cmd)) return whichCache.get(cmd)!;
-  const res = await run("sh", ["-c", `command -v ${JSON.stringify(cmd)}`], { allowFailure: true }).catch(() => ({ code: 1 }));
+  // Windows has no `sh`: `where` does the same lookup there (PATH + PATHEXT, e.g. ffmpeg.exe).
+  const res = await (process.platform === "win32"
+    ? run("where", [cmd], { allowFailure: true })
+    : run("sh", ["-c", `command -v ${JSON.stringify(cmd)}`], { allowFailure: true })
+  ).catch(() => ({ code: 1 }));
   const ok = res.code === 0;
   whichCache.set(cmd, ok);
   return ok;

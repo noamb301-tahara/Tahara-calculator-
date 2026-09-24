@@ -115,7 +115,8 @@ describe("file naming", () => {
   it("builds deterministic project ids", () => {
     const sha = "a".repeat(64);
     expect(projectIdFor("My Short #1.mp4", sha)).toBe("my-short-1-aaaaaaaa");
-    expect(projectIdFor("סרטון.mp4", sha)).toBe("project-aaaaaaaa");
+    expect(projectIdFor("סרטון.mp4", sha)).toBe("video-aaaaaaaa");
+    expect(projectIdFor("שיעור 3 - מילות מפתח.mp4", sha)).toBe("video-3-aaaaaaaa");
     expect(projectIdFor("My Short #1.mp4", sha)).toBe(projectIdFor("My Short #1.mp4", sha));
   });
   it("names frames sortably and steps/segments consistently", () => {
