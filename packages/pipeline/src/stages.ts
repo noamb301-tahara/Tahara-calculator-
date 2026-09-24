@@ -244,7 +244,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "reconstruct_screens",
-    version: 8,
+    version: 11,
     inputs: () => [PROJECT_FILES.tutorial, PROJECT_FILES.framesAnalysis],
     params: (ctx) => ({ f: ctx.project.settings.fidelityMode ?? ctx.config.fidelity.mode }),
     outputs: () => [PROJECT_FILES.screens, PROJECT_FILES.tutorial],

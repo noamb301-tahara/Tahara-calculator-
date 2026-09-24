@@ -9,6 +9,7 @@ import {
   type FrameAnalysis,
   type FramesAnalysisResult,
   type NavItem,
+  type OcrLine,
   type Overlay,
   type ScreenDefinition,
   type ScreenElement,
@@ -53,6 +54,8 @@ interface DialogModel {
 
 interface State {
   page: FrameAnalysis;
+  /** Other frames showing the same page state (elements OCR saw only in some of them). */
+  companions?: FrameAnalysis[];
   dialog: DialogModel | null;
   values: Record<string, string>;
   selections: Record<string, string>;
@@ -140,8 +143,35 @@ function gatherOptions(frames: FramesAnalysisResult, labelBox: BBox, label: stri
   return [...seen.values()].map((l) => ({ id: slugify(l, 30), label: l }));
 }
 
-function renderScreen(state: State, app: AppModel, appName: string, counter: Map<string, number>): ScreenDefinition {
-  const page = buildPage(pageLines(state.page, app, state.dialog?.bbox ?? null));
+/**
+ * Lines of the state's main frame plus lines seen only in its companion frames
+ * (a button OCR caught in one frame). A companion line is added only where the
+ * main frame has nothing, so it never duplicates or displaces an element.
+ */
+export function mergedPageLines(state: Pick<State, "page" | "companions" | "dialog">, app: AppModel, typed: string[] = []): OcrLine[] {
+  const exclude = state.dialog?.bbox ?? null;
+  const lines = pageLines(state.page, app, exclude);
+  const overlaps = (a: BBox, b: BBox) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  for (const f of state.companions ?? []) {
+    for (const l of pageLines(f, app, exclude)) {
+      // Text the user types shows up mid-state; the state machine owns field values.
+      if (typed.some((v) => labelSimilarity(v, l.text) > 0.7)) continue;
+      const dup = lines.some((m) => overlaps(m.bbox, l.bbox) || (labelSimilarity(m.text, l.text) > 0.85 && Math.abs(m.bbox.y - l.bbox.y) < 40));
+      if (!dup) lines.push(l);
+    }
+  }
+  return lines;
+}
+
+/** Frames between the state's start and the next action that show the same page. */
+function companionFrames(frames: FramesAnalysisResult, page: FrameAnalysis, from: number, to: number): FrameAnalysis[] {
+  return frames.analyses.filter(
+    (f) => f !== page && f.time >= from - 0.01 && f.time <= to + 0.01 && (f.pageTitle ?? null) === (page.pageTitle ?? null),
+  );
+}
+
+function renderScreen(state: State, app: AppModel, appName: string, counter: Map<string, number>, typed: string[]): ScreenDefinition {
+  const page = buildPage(mergedPageLines(state, app, typed));
   // Initial toggle states come from the steps ("turn off X" ⇒ X starts on).
   const setToggles = (els: ScreenElement[]) => {
     for (const el of els) {
@@ -330,12 +360,20 @@ export function reconstructScreens(input: ReconstructInput): ReconstructResult {
   const initialToggles: Record<string, boolean> = {};
   for (const s of steps) if (s.action.type === "toggle" || s.action.type === "check") initialToggles[idFor("toggle", s.action.required_real_label)] = s.action.value === "off";
   let state: State = { page: firstFrame, dialog: null, values: {}, selections: {}, toggles: initialToggles, toast: null, activeTab: null };
+  const timeOf = (file: string | null) => frameByFile(frames, file)?.time;
+  const lastTime = Math.max(...frames.analyses.map((a) => a.time));
+  let stateStart = firstFrame.time;
   for (const step of steps) {
+    // The state lasts until the click. When the click keeps the page (a toast, a toggle, typing), frames up to
+    // its result still show this state; when it swaps content in place (tab, dialog, section), stop before it.
+    const said = step.what_user_sees_after;
+    const swaps = step.action.target_type === "tab" || /^(נפתח העמוד|נפתח החלון|נפתחת הלשונית|מופיע )/.test(said);
+    const until = swaps ? timeOf(step.source.frame_before) : (timeOf(step.source.frame_after) ?? lastTime + 1) - 0.05;
+    state.companions = companionFrames(frames, state.page, Math.max(stateStart, state.page.time), until ?? state.page.time);
     states.push(state);
     const before = frameByFile(frames, step.source.frame_before) ?? state.page;
     const after = frameByFile(frames, step.source.frame_after);
     const next: State = { ...state, values: { ...state.values }, selections: { ...state.selections }, toggles: { ...state.toggles }, toast: null };
-    const said = step.what_user_sees_after;
     const label = step.action.required_real_label;
     if (step.action.type === "type" && step.action.value) next.values[idFor("input", label)] = step.action.value;
     else if (step.action.type === "select" && step.action.value) next.selections[idFor("dd", label)] = slugify(step.action.value, 30);
@@ -357,10 +395,13 @@ export function reconstructScreens(input: ReconstructInput): ReconstructResult {
     }
     // A clicked tab stays selected on the screen that follows.
     if (step.action.target_type === "tab") next.activeTab = label;
-    state = next;
+    stateStart = timeOf(step.source.frame_after) ?? stateStart;
+    state = { ...next, companions: undefined };
   }
+  state.companions = companionFrames(frames, state.page, Math.max(stateStart, state.page.time), lastTime);
   states.push(state);
-  const rendered = states.map((s) => renderScreen(s, app, appName, counter));
+  const typed = steps.filter((s) => s.action.type === "type" && s.action.value).map((s) => s.action.value!);
+  const rendered = states.map((s) => renderScreen(s, app, appName, counter, typed));
 
   // 2) Resolve every step's target on its "before" screen.
   const targetIds: string[] = [];
