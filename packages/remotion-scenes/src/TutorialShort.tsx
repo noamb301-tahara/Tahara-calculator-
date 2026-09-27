@@ -6,6 +6,7 @@ import { ThemeProvider } from "./theme/ThemeContext";
 import { Background, FontGate, SubtitleLayer } from "./scenes/chrome";
 import { CtaScene, HookScene, IntroScene, StepScene, SummaryScene } from "./scenes/scenes";
 import { FONT_FACES_TO_WAIT_FOR } from "./font-faces";
+import { SourceStepScene } from "./scenes/SourceStepScene";
 
 /**
  * TutorialShort: the 9:16 composition. Entirely driven by a RenderPlan JSON:
@@ -27,6 +28,8 @@ export const TutorialShort: React.FC<RenderPlan> = (plan) => {
                   <IntroScene scene={scene} appName={plan.appName} channelName={plan.branding.channelName} />
                 ) : scene.kind === "hook" ? (
                   <HookScene scene={scene} />
+                ) : scene.kind === "step" && scene.sourceClip && plan.source ? (
+                  <SourceStepScene scene={scene} source={plan.source} />
                 ) : scene.kind === "step" ? (
                   <StepScene scene={scene} screens={screens} />
                 ) : scene.kind === "summary" ? (

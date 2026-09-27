@@ -77,7 +77,11 @@ export type MediaInfo = z.infer<typeof MediaInfo>;
 export const StylePresetName = z.enum(["clean", "illustrated", "modern-saas", "dark"]);
 export type StylePresetName = z.infer<typeof StylePresetName>;
 
-export const FidelityMode = z.enum(["faithful", "simplified", "conceptual"]);
+/**
+ * faithful/simplified/conceptual rebuild the UI as a designed demo; "source" shows the real
+ * screen recording (zoomed on each click, personal data blurred) under the Hebrew narration.
+ */
+export const FidelityMode = z.enum(["faithful", "simplified", "conceptual", "source"]);
 export type FidelityMode = z.infer<typeof FidelityMode>;
 
 export const ProjectSettings = z.object({

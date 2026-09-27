@@ -30,7 +30,7 @@ import { reconstructScreens } from "@studio/screen-reconstruction";
 import { scriptToText, writeScript } from "@studio/script-writer";
 import { assembleVoiceTrack, buildVoiceTrack, chooseProvider, synthesizeSegments } from "@studio/voice";
 import { buildSubtitles, toSrt } from "@studio/subtitles";
-import { buildRenderPlan, computeTimeline, type Timeline } from "@studio/remotion-scenes/plan";
+import { buildRenderPlan, buildSourceClips, computeTimeline, type Timeline } from "@studio/remotion-scenes/plan";
 import { generateGuide } from "@studio/guide-generator";
 import { generateSeo } from "@studio/seo-engine";
 import { isDummy, redact } from "@studio/demo-data";
@@ -345,9 +345,9 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "plan_render",
-    version: 1,
-    inputs: () => [PROJECT_FILES.tutorial, PROJECT_FILES.screens, PROJECT_FILES.script, PROJECT_FILES.timeline, PROJECT_FILES.subtitlesJson, PROJECT_FILES.voiceMeta],
-    params: (ctx) => ({ v: ctx.config.video, s: ctx.config.style, sub: ctx.config.subtitles, preset: ctx.project.settings.stylePreset ?? null }),
+    version: 5,
+    inputs: () => [PROJECT_FILES.tutorial, PROJECT_FILES.screens, PROJECT_FILES.script, PROJECT_FILES.timeline, PROJECT_FILES.subtitlesJson, PROJECT_FILES.voiceMeta, PROJECT_FILES.actions, PROJECT_FILES.framesAnalysis],
+    params: (ctx) => ({ v: ctx.config.video, s: ctx.config.style, sub: ctx.config.subtitles, preset: ctx.project.settings.stylePreset ?? null, f: ctx.project.settings.fidelityMode ?? ctx.config.fidelity.mode }),
     outputs: () => [PROJECT_FILES.renderPlan],
     async run(ctx) {
       const tutorial = await loadTutorial(ctx);
@@ -357,7 +357,17 @@ export const STAGES: StageDef[] = [
       const timeline = await readJson<Timeline>(p(ctx, PROJECT_FILES.timeline));
       const subtitles = await readJsonAs(p(ctx, PROJECT_FILES.subtitlesJson), SubtitleTrack);
       const track = await readJsonAs(p(ctx, PROJECT_FILES.voiceMeta), VoiceTrack);
+      // "source": the steps show the real recording (zoom + marker on the real target, personal data blurred).
+      let source: Parameters<typeof buildRenderPlan>[0]["source"] = null;
+      if ((ctx.project.settings.fidelityMode ?? ctx.config.fidelity.mode) === "source" && ctx.project.source) {
+        const ingest = await readJsonAs(p(ctx, PROJECT_FILES.media), IngestResult);
+        const frames = await readJsonAs(p(ctx, PROJECT_FILES.framesAnalysis), FramesAnalysisResult);
+        const { actions } = await readJson<{ actions: DetectedAction[] }>(p(ctx, PROJECT_FILES.actions));
+        const m = ingest.media;
+        source = { src: ctx.project.source.storedFile, width: m.width, height: m.height, durationSec: m.durationSec, clips: buildSourceClips(tutorial, actions, frames) };
+      }
       const plan = buildRenderPlan({
+        source,
         projectId: ctx.project.id,
         tutorial,
         screens: screens.screens,
@@ -399,7 +409,7 @@ export const STAGES: StageDef[] = [
   },
   {
     name: "render",
-    version: 2,
+    version: 3,
     inputs: () => [PROJECT_FILES.renderPlan, PROJECT_FILES.voiceTrack],
     params: (ctx) => ({ v: ctx.config.video, r: ctx.config.render.concurrency, pv: ctx.config.privacy.verifyRender }),
     outputs: (ctx) => [relOut(ctx, FINAL_VIDEO_NAME)],
@@ -413,6 +423,7 @@ export const STAGES: StageDef[] = [
       await renderPlan(plan, {
         outputFile: out,
         audioFile: plan.audio ? p(ctx, PROJECT_FILES.voiceTrack) : null,
+        sourceFile: plan.source && ctx.project.source ? p(ctx, ctx.project.source.storedFile) : null,
         codec: ctx.config.video.codec,
         crf: ctx.config.video.crf,
         browserExecutable: ctx.config.render.browserExecutable,

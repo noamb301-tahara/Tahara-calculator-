@@ -3,6 +3,7 @@ import { FidelityMode, StylePresetName } from "./project";
 import { ScreenDefinitionSchema } from "./screen";
 import { VisualActionSchema } from "./visual-action";
 import { SubtitleCue } from "./content";
+import { BBox } from "./analysis";
 
 export const RenderSceneKind = z.enum(["intro", "hook", "step", "summary", "cta"]);
 export type RenderSceneKind = z.infer<typeof RenderSceneKind>;
@@ -32,6 +33,22 @@ export const RenderScene = z.object({
   screenId: z.string().nullable().default(null),
   actions: z.array(VisualActionSchema).default([]),
   narrationSegmentId: z.string().nullable().default(null),
+  /** "source" fidelity: play the real recording around this step's action (source-video pixels / seconds). */
+  sourceClip: z
+    .object({
+      /** When the action happens in the source video. */
+      actionSec: z.number(),
+      /** When it should happen inside this scene (lined up with the narration). */
+      atSec: z.number(),
+      point: z.object({ x: z.number(), y: z.number() }).nullable(),
+      target: BBox.nullable(),
+      /** Short Hebrew hint next to the target ("לחצו כאן"). */
+      hint: z.string(),
+      /** Regions to blur (personal data seen in the source), each while it can be on screen (source seconds). */
+      blur: z.array(BBox.extend({ from: z.number(), to: z.number() })).default([]),
+    })
+    .nullable()
+    .default(null),
 });
 export type RenderScene = z.infer<typeof RenderScene>;
 export type RenderSceneInput = z.input<typeof RenderScene>;
@@ -50,6 +67,8 @@ export const RenderPlan = z.object({
   /** Audio path relative to the Remotion public dir, or an absolute URL. Null = silent. */
   audio: z.object({ src: z.string(), durationSec: z.number() }).nullable(),
   screens: z.array(ScreenDefinitionSchema),
+  /** The source recording ("source" fidelity). `src` is relative to the Remotion public dir. */
+  source: z.object({ src: z.string(), width: z.number(), height: z.number(), durationSec: z.number() }).nullable().default(null),
   scenes: z.array(RenderScene).min(1),
   subtitles: z.array(SubtitleCue),
   subtitleStyle: z.object({ fontSize: z.number(), burnIn: z.boolean() }),

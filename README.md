@@ -59,7 +59,7 @@ CLI מלא (`pnpm studio …`):
 ## סגנונות ומצבי נאמנות
 
 * Presets: `clean`, `illustrated`, `modern-saas` (ברירת מחדל), `dark` — מחליפים עיצוב בלי לגעת במבנה ההדרכה.
-* Fidelity: `faithful` (ברירת מחדל לסרטוני "איפה ללחוץ"), `simplified`, `conceptual`.
+* Fidelity: `faithful` (ברירת מחדל לסרטוני "איפה ללחוץ"), `simplified`, `conceptual`, ו-`source`: המסך האמיתי מהסרטון המקורי, עם זום למקום הלחיצה, סימון, רמז בעברית וטשטוש של פרטים אישיים (`--fidelity source`).
 
 ## פרטיות
 

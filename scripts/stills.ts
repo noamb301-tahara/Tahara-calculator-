@@ -3,7 +3,7 @@
  *   tsx scripts/stills.ts <render-plan.json> <outDir> [sceneId:sec ...]
  * Without scene args: one frame per step at 3 moments (start, interaction, end).
  */
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { RenderPlan } from "@studio/shared";
 import { readJsonAs } from "@studio/shared/node";
 import { renderPlanStill } from "@studio/renderer";
@@ -29,6 +29,7 @@ if (specs.length) {
 }
 for (const f of frames) {
   const file = resolve(outDir, `${f.name}.png`);
-  await renderPlanStill(plan, f.frame, file);
+  // "source" plans point at the recording inside the project folder.
+  await renderPlanStill(plan, f.frame, file, null, plan.source ? resolve(dirname(resolve(planPath)), plan.source.src) : null);
   console.log(file);
 }

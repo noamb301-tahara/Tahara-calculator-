@@ -325,7 +325,8 @@ function injectTarget(screen: ScreenDefinition, dialog: Extract<Overlay, { kind:
 
 /** Apply fidelity mode (faithful keeps everything). */
 function applyFidelity(screen: ScreenDefinition, mode: FidelityMode, targets: Set<string>): ScreenDefinition {
-  if (mode === "faithful") return screen;
+  // "source" shows the real recording; the rebuilt screens stay faithful (previews, fallback).
+  if (mode === "faithful" || mode === "source") return screen;
   const keep = (el: ScreenElement): boolean => {
     const ids = collectTargetIds({ ...screen, content: [el], header: undefined, topbar: undefined, sidebar: undefined, overlays: [] });
     return [...ids].some((id) => targets.has(id));

@@ -55,6 +55,8 @@ export interface RenderOptions {
   outputFile: string;
   /** Local audio file to serve to the composition as plan.audio.src. */
   audioFile?: string | null;
+  /** Local source recording to serve as plan.source.src ("source" fidelity). */
+  sourceFile?: string | null;
   codec?: "h264" | "h265" | "vp9";
   crf?: number;
   browserExecutable?: string | null;
@@ -74,6 +76,7 @@ export async function renderPlan(plan: RenderPlan, opts: RenderOptions): Promise
     await copyFile(opts.audioFile, dest);
     inputPlan = { ...plan, audio: { ...plan.audio, src: rel } };
   }
+  if (opts.sourceFile && plan.source) inputPlan = { ...inputPlan, source: { ...plan.source, src: await servePublic(serveUrl, plan.projectId, opts.sourceFile, "source") } };
   const browserExecutable = await findBrowserExecutable(opts.browserExecutable);
   const inputProps = inputPlan as unknown as Record<string, unknown>;
   const composition = await selectComposition({ serveUrl, id: "TutorialShort", inputProps, browserExecutable, logLevel: "error" });
@@ -96,11 +99,21 @@ export async function renderPlan(plan: RenderPlan, opts: RenderOptions): Promise
   return opts.outputFile;
 }
 
+/** Copy a local file into the bundle's public dir; returns its public path. */
+async function servePublic(serveUrl: string, projectId: string, file: string, name: string): Promise<string> {
+  const rel = `projects/${projectId}/${Date.now()}-${name}${file.slice(file.lastIndexOf("."))}`;
+  const dest = join(serveUrl, "public", rel);
+  await mkdir(dirname(dest), { recursive: true });
+  await copyFile(file, dest);
+  return rel;
+}
+
 /** Render one frame of the plan as PNG (previews, visual checks). */
-export async function renderPlanStill(plan: RenderPlan, frame: number, outputFile: string, browserExecutable?: string | null): Promise<string> {
+export async function renderPlanStill(plan: RenderPlan, frame: number, outputFile: string, browserExecutable?: string | null, sourceFile?: string | null): Promise<string> {
   const serveUrl = await getBundle();
   const exe = await findBrowserExecutable(browserExecutable);
-  const inputProps = { ...plan, audio: null } as unknown as Record<string, unknown>;
+  const source = plan.source && sourceFile ? { ...plan.source, src: await servePublic(serveUrl, plan.projectId, sourceFile, "source") } : plan.source;
+  const inputProps = { ...plan, source, audio: null } as unknown as Record<string, unknown>;
   const composition = await selectComposition({ serveUrl, id: "TutorialShort", inputProps, browserExecutable: exe, logLevel: "error" });
   await mkdir(dirname(outputFile), { recursive: true });
   await renderStill({ composition, serveUrl, output: outputFile, frame, inputProps, browserExecutable: exe, logLevel: "error", chromiumOptions: chromiumOptions() });
