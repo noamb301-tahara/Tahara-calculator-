@@ -12,6 +12,11 @@
   - `AdamIntro.tsx`: סרטון היכרות.
   - `Adam.tsx`: גרסה מצוירת בקוד, לגיבוי.
   - רינדור: `pnpm exec tsx scripts/render-character.ts output/character --video`.
+- **הקול של Adam:** הקול המשוכפל של נועם ב-ElevenLabs, בשם `noam`. ליצירת קריינות באנגלית (רק במחשב של נועם, כי ElevenLabs חסום בענן):
+  `pnpm exec tsx scripts/adam-voice.ts --text "Hi, I'm Adam. I watch the viral Claude Code tips, and show you the faster way." --out output/character/adam-voice.mp3`
+  - הסקריפט מוצא את הקול לפי השם, או לפי `ELEVENLABS_VOICE_ID` אם הוגדר, ושומר MP3 וקובץ תזמונים.
+  - אחרי שנוצר הקובץ, נועם מעלה אותו לגוגל דרייב, והשיחה בענן מושכת אותו משם לסנכרון שפתיים.
+- **סנכרון שפתיים:** נועם בחר במודל **Veed Fabric 1.0** (720p) ב-Magnific. לפני יצירה צריך לבדוק עלות מדויקת עם `simulate_cost`, ולאשר מול נועם.
 - **סנכרון שפתיים** עדיין לא קיים, כי התמונה סטטית. אם נועם ירצה, אפשר לעשות את זה עם `video_speak` ב-Magnific (בתשלום, צריך לאשר איתו קודם).
 
 **התפקיד של Adam:**
