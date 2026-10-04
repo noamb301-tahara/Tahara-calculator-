@@ -6,7 +6,13 @@
 ## 0. כיוון חדש (אוקטובר 2026): ערוץ "Adam"
 
 נועם שינה כיוון. **הדמות:** Adam, רובוט חצי־אנושי עם קול נעים באנגלית.
-- **הקוד:** `packages/remotion-scenes/src/character/Adam.tsx`, סרטון היכרות ב-`AdamIntro.tsx`, ורינדור עם `pnpm exec tsx scripts/render-character.ts output/character --video`.
+- **המראה שנבחר:** תמונה פוטוריאליסטית שנוצרה ב-Magnific ונבחרה על ידי נועם, ב-`apps/renderer/public/character/adam.jpg` (1125×2000). חצי פנים אנושיות, חצי מתכת כסופה עם עין מכנית בטורקיז, ושיער אפור קצר.
+- **הקוד:**
+  - `packages/remotion-scenes/src/character/AdamPhoto.tsx`: התמונה בתנועה (זום, נשימה, זוהר בעין המכנית, ברק אור, מד קול).
+  - `AdamIntro.tsx`: סרטון היכרות.
+  - `Adam.tsx`: גרסה מצוירת בקוד, לגיבוי.
+  - רינדור: `pnpm exec tsx scripts/render-character.ts output/character --video`.
+- **סנכרון שפתיים** עדיין לא קיים, כי התמונה סטטית. אם נועם ירצה, אפשר לעשות את זה עם `video_speak` ב-Magnific (בתשלום, צריך לאשר איתו קודם).
 
 **התפקיד של Adam:**
 1. נועם בוחר סרטוני Shorts ויראליים עם טיפים ל-Claude Code.

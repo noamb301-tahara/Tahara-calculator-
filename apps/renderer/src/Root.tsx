@@ -44,6 +44,7 @@ export const Root: React.FC = () => (
       component={AdamIntro}
       defaultProps={{
         handle: "@adam.codes",
+        variant: "photo" as "photo" | "drawn",
         lines: [
           { text: "Hi, I'm Adam.", from: 0.8, to: 2.4 },
           { text: "I watch the viral Claude Code tips…", from: 2.5, to: 4.6 },

@@ -15,3 +15,4 @@ export * from "./font-faces";
 export * from "./plan";
 export * from "./character/Adam";
 export * from "./character/AdamIntro";
+export * from "./character/AdamPhoto";
