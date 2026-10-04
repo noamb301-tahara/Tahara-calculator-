@@ -13,3 +13,5 @@ export * from "./scenes/scenes";
 export * from "./TutorialShort";
 export * from "./font-faces";
 export * from "./plan";
+export * from "./character/Adam";
+export * from "./character/AdamIntro";

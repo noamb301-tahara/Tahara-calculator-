@@ -1,7 +1,7 @@
 import "@studio/remotion-scenes/fonts";
 import React from "react";
 import { Composition, type CalculateMetadataFunction } from "remotion";
-import { ScreenPreview, TutorialShort } from "@studio/remotion-scenes";
+import { AdamIntro, ScreenPreview, TutorialShort } from "@studio/remotion-scenes";
 import type { RenderPlan } from "@studio/shared";
 import samplePlan from "./sample-plan.json";
 
@@ -38,6 +38,22 @@ export const Root: React.FC = () => (
       width={sample.width}
       height={sample.height}
       fps={sample.fps}
+    />
+    <Composition
+      id="AdamIntro"
+      component={AdamIntro}
+      defaultProps={{
+        handle: "@adam.codes",
+        lines: [
+          { text: "Hi, I'm Adam.", from: 0.8, to: 2.4 },
+          { text: "I watch the viral Claude Code tips…", from: 2.5, to: 4.6 },
+          { text: "…and show you the faster way.", from: 4.7, to: 6.8 },
+        ],
+      }}
+      durationInFrames={225}
+      width={1080}
+      height={1920}
+      fps={30}
     />
   </>
 );

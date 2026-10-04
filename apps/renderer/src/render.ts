@@ -119,3 +119,14 @@ export async function renderPlanStill(plan: RenderPlan, frame: number, outputFil
   await renderStill({ composition, serveUrl, output: outputFile, frame, inputProps, browserExecutable: exe, logLevel: "error", chromiumOptions: chromiumOptions() });
   return outputFile;
 }
+
+/** Render any registered composition by id (character previews etc.): a still when `frame` is set, else an MP4. */
+export async function renderCompositionById(id: string, props: Record<string, unknown>, outputFile: string, frame?: number): Promise<string> {
+  const serveUrl = await getBundle();
+  const exe = await findBrowserExecutable();
+  const composition = await selectComposition({ serveUrl, id, inputProps: props, browserExecutable: exe, logLevel: "error" });
+  await mkdir(dirname(outputFile), { recursive: true });
+  if (frame !== undefined) await renderStill({ composition, serveUrl, output: outputFile, frame, inputProps: props, browserExecutable: exe, logLevel: "error", chromiumOptions: chromiumOptions() });
+  else await renderMedia({ composition, serveUrl, codec: "h264", crf: 20, outputLocation: outputFile, inputProps: props, browserExecutable: exe, pixelFormat: "yuv420p", logLevel: "error", chromiumOptions: chromiumOptions() });
+  return outputFile;
+}
